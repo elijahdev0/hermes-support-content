@@ -1,0 +1,70 @@
+---
+title: "Webhook | Dokploy"
+source: "https://docs.dokploy.com/docs/core/webhook"
+category: dokploy-docs
+created: "2026-06-25T17:21:39.217Z"
+---
+
+Webhook | Dokploy
+
+Notifications
+
+# Webhook
+
+Copy as Markdown
+
+Configure webhook notifications for your applications.
+
+Webhook notifications are a generic way to receive notifications from Dokploy to any HTTP endpoint. You can choose to receive notifications for specific events or all events. Notifications are sent in JSON format.
+
+## Webhook Notifications
+
+To start receiving webhook notifications, you need to fill the form with the following details:
+
+- Name: Enter any name you want.
+- Webhook URL: Enter the webhook URL where you want to receive notifications. eg.`https://your-endpoint.com/webhook`
+
+## Testing Your Webhook
+
+For testing purposes, you can use Webhook.site to generate a unique URL and inspect the JSON payload that Dokploy sends:
+
+1. Go to https://webhook.site
+2. Copy your unique webhook URL
+3. Go to Dokploy Notifications and select Webhook as the notification provider
+4. Enter a name for your notification configuration
+5. Paste the webhook URL you copied
+6. Click on Test to send a test notification
+7. Check your Webhook.site page to see the JSON payload
+8. Click on Create to save the notification
+
+## JSON Format
+
+Dokploy sends notifications in JSON format. The payload structure includes information about the event type, timestamp, and relevant details about the action that triggered the notification.
+
+Example notification payload:
+
+```
+{
+  "title": "Test Notification",
+  "message": "Hi, From Dokploy 👋",
+  "timestamp": "2025-12-07T19:41:53.470Z"
+}
+```
+
+## Production Setup
+
+For production use, ensure your webhook endpoint:
+
+- Accepts POST requests
+- Returns a 2xx HTTP status code for successful delivery
+- Handles JSON payloads
+- Is accessible from the internet (or from your Dokploy server's network)
+- Implements proper authentication if needed (consider using HTTPS with API keys in headers)
+
+PushoverConfigure Pushover notifications for your applications.
+
+RegistryConfigure your registry settings to store your images and artifacts.
+
+### On this page
+
+Webhook NotificationsTesting Your WebhookJSON FormatProduction Setup

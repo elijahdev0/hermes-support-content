@@ -1,0 +1,101 @@
+---
+title: "Dokploy Cloud | Dokploy"
+source: "https://docs.dokploy.com/docs/core/cloud"
+category: dokploy-docs
+created: "2026-06-25T17:16:11.091Z"
+---
+
+Dokploy Cloud | Dokploy
+
+# Dokploy Cloud
+
+Copy as Markdown
+
+Deploy your apps to multiple servers remotely without worrying about the underlying infrastructure.
+
+Dokploy Cloud is the managed version of Dokploy. Instead of installing and maintaining Dokploy on your own server, the control plane (UI, database, and management layer) is hosted by us — you just connect your own servers and deploy.
+
+## How it works
+
+With Self-Hosted Dokploy, everything runs on a single server: the UI, the database (PostgreSQL), Redis, Traefik, and your applications — all on the same machine. This works well for small setups, but as you scale, your management layer competes for resources with your actual workloads.
+
+Dokploy Cloud separates these concerns:
+
+```
+┌──────────────────────────────┐       ┌─────────────────────────┐
+│       Dokploy Cloud          │       │    Your Server(s)       │
+│    (managed by Dokploy)      │       │  (any cloud provider)   │
+│                              │       │                         │
+│  ┌────────────┐              │       │  ┌───────────────────┐  │
+│  │  Dashboard  │─── deploy ──┼──────►│  │  Your apps        │  │
+│  │  (UI)       │             │       │  │  Your databases    │  │
+│  ├────────────┤              │       │  │  Your compose      │  │
+│  │ PostgreSQL  │              │       │  │  Traefik (proxy)   │  │
+│  ├────────────┤              │       │  └───────────────────┘  │
+│  │   Redis     │              │       │                         │
+│  └────────────┘              │       │  ┌───────────────────┐  │
+│                              │       │  │  Monitoring agent  │  │
+│  ┌────────────┐              │◄──────┤  │  (metrics → cloud) │  │
+│  │ Monitoring  │              │       │  └───────────────────┘  │
+│  └────────────┘              │       │                         │
+└──────────────────────────────┘       └─────────────────────────┘
+```
+
+- Control plane (Cloud): Dashboard, user management, deployment orchestration, monitoring dashboard, and notifications.
+- Data plane (Your servers): Your actual applications, databases, Traefik, and a lightweight monitoring agent.
+
+Your code and data never leave your servers. Dokploy Cloud only manages the orchestration.
+
+## Key benefits
+
+| Benefit | Description |
+| --- | --- |
+| No management overhead | No need to maintain the Dokploy instance itself — updates, backups, and uptime are handled for you |
+| 100% server resources for your apps | The UI and management database don't compete with your workloads |
+| Multi-server from day one | Connect as many servers as you need from any provider (AWS, GCP, Azure, DigitalOcean, Hetzner, etc.) |
+| Automatic updates | Always on the latest version of Dokploy without manual upgrades |
+| Support | Direct support via email/chat (Startup) or priority SLA (Enterprise) |
+
+## Getting started
+
+1. Register on Dokploy Cloud.
+2. Add a server by providing the SSH connection details (IP, port, SSH key).
+3. Dokploy Cloud will set up the server automatically (Docker, Traefik, monitoring agent).
+4. Start deploying your applications, databases, and compose stacks.
+
+You can connect servers from any provider — they just need to be reachable via SSH. You can even mix providers (e.g., Hetzner for production, DigitalOcean for staging).
+
+## Pricing
+
+Dokploy Cloud offers several plans:
+
+| Plan | Price | Servers included | Additional servers |
+| --- | --- | --- | --- |
+| Hobby | $4.50/month per server | 1 | $4.50/month each |
+| Startup | $15/month | 3 | $4.50/month each |
+| Enterprise | Custom | Custom | Contact sales |
+| Agency | Custom | Custom | Contact partner team |
+
+All plans include unlimited deployments, databases, and applications per server. Annual billing saves 20%.
+
+See the Pricing page for full plan details and feature limits.
+
+## When to use Cloud vs Self-Hosted
+
+| Use Cloud when... | Use Self-Hosted when... |
+| --- | --- |
+| You don't want to maintain the Dokploy instance | You want full control over everything |
+| You need multi-server from the start | You have a single server and want to keep it simple |
+| You want built-in monitoring without extra config | You already have your own monitoring stack |
+| You prefer automatic updates | You want to control when updates happen |
+| You need HA for the management layer | Budget is the top priority |
+
+For a full feature comparison, see Cloud vs Self-Hosted Differences.
+
+TroubleshootingSolve the most common problems that occur when using Dokploy.
+
+MonitoringMonitor your applications and servers with Dokploy
+
+### On this page
+
+How it worksKey benefitsGetting startedPricingWhen to use Cloud vs Self-Hosted

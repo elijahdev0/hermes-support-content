@@ -1,0 +1,118 @@
+---
+title: "draw.io | Dokploy"
+source: "https://docs.dokploy.com/docs/templates/drawio"
+category: dokploy-docs
+created: "2026-06-25T17:21:46.246Z"
+---
+
+draw.io | Dokploy
+
+# draw.io
+
+Copy as Markdown
+
+draw.io is a configurable diagramming/whiteboarding visualization application.
+
+## Configuration
+
+docker-compose.ymltemplate.toml
+
+```
+version: '3'
+services:
+  plantuml-server:
+    image: plantuml/plantuml-server
+    ports:
+      - "8080"
+
+    volumes:
+      - fonts_volume:/usr/share/fonts/drawio
+  image-export:
+    image: jgraph/export-server
+    ports:
+      - "8000"
+
+    volumes:
+      - fonts_volume:/usr/share/fonts/drawio
+    environment:
+      - DRAWIO_BASE_URL=${DRAWIO_BASE_URL}
+  drawio:
+    image: jgraph/drawio:24.7.17
+    ports:
+      - "8080"
+    links:
+      - plantuml-server:plantuml-server
+      - image-export:image-export
+    depends_on:
+      - plantuml-server
+      - image-export
+
+    environment:
+      RAWIO_SELF_CONTAINED: 1
+      DRAWIO_USE_HTTP: 1
+      PLANTUML_URL: http://plantuml-server:8080/
+      EXPORT_URL: http://image-export:8000/
+      DRAWIO_BASE_URL: ${DRAWIO_BASE_URL}
+      DRAWIO_SERVER_URL: ${DRAWIO_SERVER_URL}
+      DRAWIO_CSP_HEADER: ${DRAWIO_CSP_HEADER}
+      DRAWIO_VIEWER_URL: ${DRAWIO_VIEWER_URL}
+      DRAWIO_LIGHTBOX_URL: ${DRAWIO_LIGHTBOX_URL}
+      DRAWIO_CONFIG: ${DRAWIO_CONFIG}
+      DRAWIO_GOOGLE_CLIENT_ID: ${DRAWIO_GOOGLE_CLIENT_ID}
+      DRAWIO_GOOGLE_APP_ID: ${DRAWIO_GOOGLE_APP_ID}
+      DRAWIO_GOOGLE_CLIENT_SECRET: ${DRAWIO_GOOGLE_CLIENT_SECRET}
+      DRAWIO_GOOGLE_VIEWER_CLIENT_ID: ${DRAWIO_GOOGLE_VIEWER_CLIENT_ID}
+      DRAWIO_GOOGLE_VIEWER_APP_ID: ${DRAWIO_GOOGLE_VIEWER_APP_ID}
+      DRAWIO_GOOGLE_VIEWER_CLIENT_SECRET: ${DRAWIO_GOOGLE_VIEWER_CLIENT_SECRET}
+      DRAWIO_MSGRAPH_CLIENT_ID: ${DRAWIO_MSGRAPH_CLIENT_ID}
+      DRAWIO_MSGRAPH_CLIENT_SECRET: ${DRAWIO_MSGRAPH_CLIENT_SECRET}
+      DRAWIO_MSGRAPH_TENANT_ID: ${DRAWIO_MSGRAPH_TENANT_ID}
+      DRAWIO_GITLAB_ID: ${DRAWIO_GITLAB_ID}
+      DRAWIO_GITLAB_SECRET: ${DRAWIO_GITLAB_SECRET}
+      DRAWIO_GITLAB_URL: ${DRAWIO_GITLAB_URL}
+      DRAWIO_CLOUD_CONVERT_APIKEY: ${DRAWIO_CLOUD_CONVERT_APIKEY}
+volumes:
+  fonts_volume:
+```
+
+```
+[variables]
+main_domain = "${domain}"
+
+[config]
+env = [
+  "DRAWIO_HOST=${main_domain}",
+  "DRAWIO_BASE_URL=https://${main_domain}",
+  "DRAWIO_SERVER_URL=https://${main_domain}/",
+]
+mounts = []
+
+[[config.domains]]
+serviceName = "drawio"
+port = 8_080
+host = "${main_domain}"
+```
+
+## Base64
+
+To import this template in Dokploy: create a Compose service → Advanced → Base64 import and paste the content below:
+
+```
+ewogICJjb21wb3NlIjogInZlcnNpb246ICczJ1xuc2VydmljZXM6XG4gIHBsYW50dW1sLXNlcnZlcjpcbiAgICBpbWFnZTogcGxhbnR1bWwvcGxhbnR1bWwtc2VydmVyXG4gICAgcG9ydHM6XG4gICAgICAtIFwiODA4MFwiXG5cbiAgICB2b2x1bWVzOlxuICAgICAgLSBmb250c192b2x1bWU6L3Vzci9zaGFyZS9mb250cy9kcmF3aW9cbiAgaW1hZ2UtZXhwb3J0OlxuICAgIGltYWdlOiBqZ3JhcGgvZXhwb3J0LXNlcnZlclxuICAgIHBvcnRzOlxuICAgICAgLSBcIjgwMDBcIlxuXG4gICAgdm9sdW1lczpcbiAgICAgIC0gZm9udHNfdm9sdW1lOi91c3Ivc2hhcmUvZm9udHMvZHJhd2lvXG4gICAgZW52aXJvbm1lbnQ6XG4gICAgICAtIERSQVdJT19CQVNFX1VSTD0ke0RSQVdJT19CQVNFX1VSTH1cbiAgZHJhd2lvOlxuICAgIGltYWdlOiBqZ3JhcGgvZHJhd2lvOjI0LjcuMTdcbiAgICBwb3J0czpcbiAgICAgIC0gXCI4MDgwXCJcbiAgICBsaW5rczpcbiAgICAgIC0gcGxhbnR1bWwtc2VydmVyOnBsYW50dW1sLXNlcnZlclxuICAgICAgLSBpbWFnZS1leHBvcnQ6aW1hZ2UtZXhwb3J0XG4gICAgZGVwZW5kc19vbjpcbiAgICAgIC0gcGxhbnR1bWwtc2VydmVyXG4gICAgICAtIGltYWdlLWV4cG9ydFxuXG4gICAgZW52aXJvbm1lbnQ6XG4gICAgICBSQVdJT19TRUxGX0NPTlRBSU5FRDogMVxuICAgICAgRFJBV0lPX1VTRV9IVFRQOiAxXG4gICAgICBQTEFOVFVNTF9VUkw6IGh0dHA6Ly9wbGFudHVtbC1zZXJ2ZXI6ODA4MC9cbiAgICAgIEVYUE9SVF9VUkw6IGh0dHA6Ly9pbWFnZS1leHBvcnQ6ODAwMC9cbiAgICAgIERSQVdJT19CQVNFX1VSTDogJHtEUkFXSU9fQkFTRV9VUkx9XG4gICAgICBEUkFXSU9fU0VSVkVSX1VSTDogJHtEUkFXSU9fU0VSVkVSX1VSTH1cbiAgICAgIERSQVdJT19DU1BfSEVBREVSOiAke0RSQVdJT19DU1BfSEVBREVSfVxuICAgICAgRFJBV0lPX1ZJRVdFUl9VUkw6ICR7RFJBV0lPX1ZJRVdFUl9VUkx9XG4gICAgICBEUkFXSU9fTElHSFRCT1hfVVJMOiAke0RSQVdJT19MSUdIVEJPWF9VUkx9XG4gICAgICBEUkFXSU9fQ09ORklHOiAke0RSQVdJT19DT05GSUd9XG4gICAgICBEUkFXSU9fR09PR0xFX0NMSUVOVF9JRDogJHtEUkFXSU9fR09PR0xFX0NMSUVOVF9JRH1cbiAgICAgIERSQVdJT19HT09HTEVfQVBQX0lEOiAke0RSQVdJT19HT09HTEVfQVBQX0lEfVxuICAgICAgRFJBV0lPX0dPT0dMRV9DTElFTlRfU0VDUkVUOiAke0RSQVdJT19HT09HTEVfQ0xJRU5UX1NFQ1JFVH1cbiAgICAgIERSQVdJT19HT09HTEVfVklFV0VSX0NMSUVOVF9JRDogJHtEUkFXSU9fR09PR0xFX1ZJRVdFUl9DTElFTlRfSUR9XG4gICAgICBEUkFXSU9fR09PR0xFX1ZJRVdFUl9BUFBfSUQ6ICR7RFJBV0lPX0dPT0dMRV9WSUVXRVJfQVBQX0lEfVxuICAgICAgRFJBV0lPX0dPT0dMRV9WSUVXRVJfQ0xJRU5UX1NFQ1JFVDogJHtEUkFXSU9fR09PR0xFX1ZJRVdFUl9DTElFTlRfU0VDUkVUfVxuICAgICAgRFJBV0lPX01TR1JBUEhfQ0xJRU5UX0lEOiAke0RSQVdJT19NU0dSQVBIX0NMSUVOVF9JRH1cbiAgICAgIERSQVdJT19NU0dSQVBIX0NMSUVOVF9TRUNSRVQ6ICR7RFJBV0lPX01TR1JBUEhfQ0xJRU5UX1NFQ1JFVH1cbiAgICAgIERSQVdJT19NU0dSQVBIX1RFTkFOVF9JRDogJHtEUkFXSU9fTVNHUkFQSF9URU5BTlRfSUR9XG4gICAgICBEUkFXSU9fR0lUTEFCX0lEOiAke0RSQVdJT19HSVRMQUJfSUR9XG4gICAgICBEUkFXSU9fR0lUTEFCX1NFQ1JFVDogJHtEUkFXSU9fR0lUTEFCX1NFQ1JFVH1cbiAgICAgIERSQVdJT19HSVRMQUJfVVJMOiAke0RSQVdJT19HSVRMQUJfVVJMfVxuICAgICAgRFJBV0lPX0NMT1VEX0NPTlZFUlRfQVBJS0VZOiAke0RSQVdJT19DTE9VRF9DT05WRVJUX0FQSUtFWX1cbnZvbHVtZXM6XG4gIGZvbnRzX3ZvbHVtZToiLAogICJjb25maWciOiAiW3ZhcmlhYmxlc11cbm1haW5fZG9tYWluID0gXCIke2RvbWFpbn1cIlxuXG5bY29uZmlnXVxuZW52ID0gW1xuICBcIkRSQVdJT19IT1NUPSR7bWFpbl9kb21haW59XCIsXG4gIFwiRFJBV0lPX0JBU0VfVVJMPWh0dHBzOi8vJHttYWluX2RvbWFpbn1cIixcbiAgXCJEUkFXSU9fU0VSVkVSX1VSTD1odHRwczovLyR7bWFpbl9kb21haW59L1wiLFxuXVxubW91bnRzID0gW11cblxuW1tjb25maWcuZG9tYWluc11dXG5zZXJ2aWNlTmFtZSA9IFwiZHJhd2lvXCJcbnBvcnQgPSA4XzA4MFxuaG9zdCA9IFwiJHttYWluX2RvbWFpbn1cIlxuIgp9
+```
+
+## Links
+
+`drawing`,`diagrams`
+
+---
+
+Version:`24.7.17`
+
+DragonflyDragonfly is a drop-in Redis replacement that is designed for heavy data workloads running on modern cloud hardware.
+
+DrawnixDrawnix is an application for generating and managing visual content, powered by pubuzhixing/drawnix Docker image.
+
+### On this page
+
+ConfigurationBase64LinksTags

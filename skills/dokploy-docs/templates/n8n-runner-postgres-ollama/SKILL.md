@@ -1,0 +1,229 @@
+---
+title: "n8n + Worker + Runner with Redis/Postgres and Ollama | Dokploy"
+source: "https://docs.dokploy.com/docs/templates/n8n-runner-postgres-ollama"
+category: dokploy-docs
+created: "2026-06-25T17:21:54.354Z"
+---
+
+n8n + Worker + Runner with Redis/Postgres and Ollama | Dokploy
+
+# n8n + Worker + Runner with Redis/Postgres and Ollama
+
+Copy as Markdown
+
+n8n is an open source low-code platform for automating workflows and integrations with PostgreSQL database and Ollama AI model.
+
+## Configuration
+
+docker-compose.ymltemplate.toml
+
+```
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=${N8N_PORT}
+      - N8N_PROTOCOL=https
+      # Database
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      # Configuration
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_PERSONALIZATION_ENABLED=true
+      - N8N_ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - N8N_USER_MANAGEMENT_JWT_SECRET
+      - N8N_SECURE_COOKIE=true
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=true
+      - N8N_PROXY_HOPS=${PROXY_HOPS:-1}
+      - WEBHOOK_URL=https://${N8N_HOST}/
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - N8N_TEMPLATES_ENABLED=true
+      - N8N_HIRING_BANNER_ENABLED=false
+      - OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=true
+      # Ollama
+      - OLLAMA_HOST=${OLLAMA_HOST:-ollama:11434}
+      # Runners
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_RUNNERS_MODE=external
+      - N8N_RUNNERS_BROKER_LISTEN_ADDRESS=0.0.0.0
+      - N8N_RUNNERS_AUTH_TOKEN=${N8N_RUNNERS_SECRET}
+      - N8N_NATIVE_PYTHON_RUNNER=true
+      - N8N_RUNNERS_MAX_CONCURRENCY=50
+      # Logging
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=7
+      # Redis
+      - EXECUTIONS_MODE=queue
+      - QUEUE_BULL_REDIS_HOST=redis
+      - QUEUE_BULL_REDIS_PORT=6379
+      # Emails
+      # - N8N_SMTP_HOST=${SMTP_HOST}
+      # - N8N_SMTP_PORT=${SMTP_PORT}
+      # - N8N_SMTP_USER=${SMTP_USER}
+      # - N8N_SMTP_PASS=${SMTP_PASS}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  n8n-worker:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: always
+    command: worker
+    environment:
+      - NODE_ENV=production
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=${N8N_PORT}
+      - N8N_PROTOCOL=https
+      - EXECUTIONS_MODE=queue
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - N8N_ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - N8N_SECURE_COOKIE=true
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=true
+      - N8N_PROXY_HOPS=${PROXY_HOPS}
+      - WEBHOOK_URL=https://${N8N_HOST}/
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - QUEUE_BULL_REDIS_HOST=redis
+      - QUEUE_BULL_REDIS_PORT=6379
+    depends_on:
+      - n8n
+      - redis
+
+  n8n-runner:
+    image: n8nio/runners:nightly
+    restart: always
+    environment:
+      - N8N_RUNNERS_TASK_BROKER_URI=http://n8n:5679
+      - N8N_RUNNERS_AUTH_TOKEN=${N8N_RUNNERS_SECRET}
+      - N8N_ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - N8N_RUNNERS_MAX_CONCURRENCY=50
+    depends_on:
+      - n8n
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_storage:/home/node/.ollama
+
+  init-ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_storage:/home/node/.ollama
+    entrypoint: /bin/sh
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    command:
+      - "-c"
+      - "sleep 3; ollama pull llama3.2:latest; ollama pull gemma3:latest"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_storage:/data
+
+  postgres:
+    image: postgres:17-alpine
+    hostname: postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_storage:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  n8n_data:
+  postgres_storage:
+  ollama_storage:
+  redis_storage:
+```
+
+```
+[variables]
+main_domain = "${domain}"
+postgres_user = "${username}"
+postgres_password = "${password:24}"
+postgres_db = "n8n"
+n8n_encryption_key = "${base64:64}"
+n8n_runner_secret = "${base64:64}"
+
+[config]
+mounts = []
+
+[[config.domains]]
+serviceName = "n8n"
+port = 5_678
+host = "${main_domain}"
+
+[config.env]
+N8N_HOST = "${main_domain}"
+N8N_PORT = "5678"
+N8N_RUNNERS_SECRET = "${n8n_runner_secret}"
+
+PROXY_HOPS = "0"
+ENCRYPTION_KEY = "${n8n_encryption_key}"
+GENERIC_TIMEZONE = "Europe/Berlin"
+
+POSTGRES_DB = "${postgres_db}"
+POSTGRES_USER = "${postgres_user}"
+POSTGRES_PASSWORD = "${postgres_password}"
+
+OLLAMA_HOST = "http://ollama:11434"
+
+SMTP_HOST = ""
+SMTP_PORT = "587"
+SMTP_USER = ""
+SMTP_PASS = ""
+```
+
+## Base64
+
+To import this template in Dokploy: create a Compose service → Advanced → Base64 import and paste the content below:
+
+```
+ewogICJjb21wb3NlIjogInNlcnZpY2VzOlxuICBuOG46XG4gICAgaW1hZ2U6IG44bmlvL244bjpsYXRlc3RcbiAgICByZXN0YXJ0OiB1bmxlc3Mtc3RvcHBlZFxuICAgIGVudmlyb25tZW50OlxuICAgICAgLSBOT0RFX0VOVj1wcm9kdWN0aW9uXG4gICAgICAtIE44Tl9IT1NUPSR7TjhOX0hPU1R9XG4gICAgICAtIE44Tl9QT1JUPSR7TjhOX1BPUlR9XG4gICAgICAtIE44Tl9QUk9UT0NPTD1odHRwc1xuICAgICAgIyBEYXRhYmFzZVxuICAgICAgLSBEQl9UWVBFPXBvc3RncmVzZGJcbiAgICAgIC0gREJfUE9TVEdSRVNEQl9IT1NUPXBvc3RncmVzXG4gICAgICAtIERCX1BPU1RHUkVTREJfVVNFUj0ke1BPU1RHUkVTX1VTRVJ9XG4gICAgICAtIERCX1BPU1RHUkVTREJfUEFTU1dPUkQ9JHtQT1NUR1JFU19QQVNTV09SRH1cbiAgICAgICMgQ29uZmlndXJhdGlvblxuICAgICAgLSBOOE5fRElBR05PU1RJQ1NfRU5BQkxFRD1mYWxzZVxuICAgICAgLSBOOE5fUEVSU09OQUxJWkFUSU9OX0VOQUJMRUQ9dHJ1ZVxuICAgICAgLSBOOE5fRU5DUllQVElPTl9LRVk9JHtFTkNSWVBUSU9OX0tFWX1cbiAgICAgIC0gTjhOX1VTRVJfTUFOQUdFTUVOVF9KV1RfU0VDUkVUXG4gICAgICAtIE44Tl9TRUNVUkVfQ09PS0lFPXRydWVcbiAgICAgIC0gTjhOX0VORk9SQ0VfU0VUVElOR1NfRklMRV9QRVJNSVNTSU9OUz10cnVlXG4gICAgICAtIE44Tl9CTE9DS19FTlZfQUNDRVNTX0lOX05PREU9dHJ1ZVxuICAgICAgLSBOOE5fUFJPWFlfSE9QUz0ke1BST1hZX0hPUFM6LTF9XG4gICAgICAtIFdFQkhPT0tfVVJMPWh0dHBzOi8vJHtOOE5fSE9TVH0vXG4gICAgICAtIEdFTkVSSUNfVElNRVpPTkU9JHtHRU5FUklDX1RJTUVaT05FfVxuICAgICAgLSBOOE5fVEVNUExBVEVTX0VOQUJMRUQ9dHJ1ZVxuICAgICAgLSBOOE5fSElSSU5HX0JBTk5FUl9FTkFCTEVEPWZhbHNlXG4gICAgICAtIE9GRkxPQURfTUFOVUFMX0VYRUNVVElPTlNfVE9fV09SS0VSUz10cnVlXG4gICAgICAjIE9sbGFtYVxuICAgICAgLSBPTExBTUFfSE9TVD0ke09MTEFNQV9IT1NUOi1vbGxhbWE6MTE0MzR9XG4gICAgICAjIFJ1bm5lcnNcbiAgICAgIC0gTjhOX1JVTk5FUlNfRU5BQkxFRD10cnVlXG4gICAgICAtIE44Tl9SVU5ORVJTX01PREU9ZXh0ZXJuYWxcbiAgICAgIC0gTjhOX1JVTk5FUlNfQlJPS0VSX0xJU1RFTl9BRERSRVNTPTAuMC4wLjBcbiAgICAgIC0gTjhOX1JVTk5FUlNfQVVUSF9UT0tFTj0ke044Tl9SVU5ORVJTX1NFQ1JFVH1cbiAgICAgIC0gTjhOX05BVElWRV9QWVRIT05fUlVOTkVSPXRydWVcbiAgICAgIC0gTjhOX1JVTk5FUlNfTUFYX0NPTkNVUlJFTkNZPTUwXG4gICAgICAjIExvZ2dpbmdcbiAgICAgIC0gRVhFQ1VUSU9OU19EQVRBX1BSVU5FPXRydWVcbiAgICAgIC0gRVhFQ1VUSU9OU19EQVRBX01BWF9BR0U9N1xuICAgICAgIyBSZWRpc1xuICAgICAgLSBFWEVDVVRJT05TX01PREU9cXVldWVcbiAgICAgIC0gUVVFVUVfQlVMTF9SRURJU19IT1NUPXJlZGlzXG4gICAgICAtIFFVRVVFX0JVTExfUkVESVNfUE9SVD02Mzc5XG4gICAgICAjIEVtYWlsc1xuICAgICAgIyAtIE44Tl9TTVRQX0hPU1Q9JHtTTVRQX0hPU1R9XG4gICAgICAjIC0gTjhOX1NNVFBfUE9SVD0ke1NNVFBfUE9SVH1cbiAgICAgICMgLSBOOE5fU01UUF9VU0VSPSR7U01UUF9VU0VSfVxuICAgICAgIyAtIE44Tl9TTVRQX1BBU1M9JHtTTVRQX1BBU1N9XG4gICAgdm9sdW1lczpcbiAgICAgIC0gbjhuX2RhdGE6L2hvbWUvbm9kZS8ubjhuXG4gICAgZGVwZW5kc19vbjpcbiAgICAgIHBvc3RncmVzOlxuICAgICAgICBjb25kaXRpb246IHNlcnZpY2VfaGVhbHRoeVxuICAgICAgcmVkaXM6XG4gICAgICAgIGNvbmRpdGlvbjogc2VydmljZV9oZWFsdGh5XG5cbiAgbjhuLXdvcmtlcjpcbiAgICBpbWFnZTogZG9ja2VyLm44bi5pby9uOG5pby9uOG46bGF0ZXN0XG4gICAgcmVzdGFydDogYWx3YXlzXG4gICAgY29tbWFuZDogd29ya2VyXG4gICAgZW52aXJvbm1lbnQ6XG4gICAgICAtIE5PREVfRU5WPXByb2R1Y3Rpb25cbiAgICAgIC0gTjhOX0hPU1Q9JHtOOE5fSE9TVH1cbiAgICAgIC0gTjhOX1BPUlQ9JHtOOE5fUE9SVH1cbiAgICAgIC0gTjhOX1BST1RPQ09MPWh0dHBzXG4gICAgICAtIEVYRUNVVElPTlNfTU9ERT1xdWV1ZVxuICAgICAgLSBEQl9UWVBFPXBvc3RncmVzZGJcbiAgICAgIC0gREJfUE9TVEdSRVNEQl9IT1NUPXBvc3RncmVzXG4gICAgICAtIERCX1BPU1RHUkVTREJfVVNFUj0ke1BPU1RHUkVTX1VTRVJ9XG4gICAgICAtIERCX1BPU1RHUkVTREJfUEFTU1dPUkQ9JHtQT1NUR1JFU19QQVNTV09SRH1cbiAgICAgIC0gTjhOX0VOQ1JZUFRJT05fS0VZPSR7RU5DUllQVElPTl9LRVl9XG4gICAgICAtIE44Tl9TRUNVUkVfQ09PS0lFPXRydWVcbiAgICAgIC0gTjhOX0VORk9SQ0VfU0VUVElOR1NfRklMRV9QRVJNSVNTSU9OUz10cnVlXG4gICAgICAtIE44Tl9CTE9DS19FTlZfQUNDRVNTX0lOX05PREU9dHJ1ZVxuICAgICAgLSBOOE5fUFJPWFlfSE9QUz0ke1BST1hZX0hPUFN9XG4gICAgICAtIFdFQkhPT0tfVVJMPWh0dHBzOi8vJHtOOE5fSE9TVH0vXG4gICAgICAtIEdFTkVSSUNfVElNRVpPTkU9JHtHRU5FUklDX1RJTUVaT05FfVxuICAgICAgLSBRVUVVRV9CVUxMX1JFRElTX0hPU1Q9cmVkaXNcbiAgICAgIC0gUVVFVUVfQlVMTF9SRURJU19QT1JUPTYzNzlcbiAgICBkZXBlbmRzX29uOlxuICAgICAgLSBuOG5cbiAgICAgIC0gcmVkaXNcblxuICBuOG4tcnVubmVyOlxuICAgIGltYWdlOiBuOG5pby9ydW5uZXJzOm5pZ2h0bHlcbiAgICByZXN0YXJ0OiBhbHdheXNcbiAgICBlbnZpcm9ubWVudDpcbiAgICAgIC0gTjhOX1JVTk5FUlNfVEFTS19CUk9LRVJfVVJJPWh0dHA6Ly9uOG46NTY3OVxuICAgICAgLSBOOE5fUlVOTkVSU19BVVRIX1RPS0VOPSR7TjhOX1JVTk5FUlNfU0VDUkVUfVxuICAgICAgLSBOOE5fRU5DUllQVElPTl9LRVk9JHtFTkNSWVBUSU9OX0tFWX1cbiAgICAgIC0gR0VORVJJQ19USU1FWk9ORT0ke0dFTkVSSUNfVElNRVpPTkV9XG4gICAgICAtIE44Tl9SVU5ORVJTX01BWF9DT05DVVJSRU5DWT01MFxuICAgIGRlcGVuZHNfb246XG4gICAgICAtIG44blxuXG4gIG9sbGFtYTpcbiAgICBpbWFnZTogb2xsYW1hL29sbGFtYTpsYXRlc3RcbiAgICByZXN0YXJ0OiB1bmxlc3Mtc3RvcHBlZFxuICAgIHZvbHVtZXM6XG4gICAgICAtIG9sbGFtYV9zdG9yYWdlOi9ob21lL25vZGUvLm9sbGFtYVxuICAgICAgXG4gIGluaXQtb2xsYW1hOlxuICAgIGltYWdlOiBvbGxhbWEvb2xsYW1hOmxhdGVzdFxuICAgIHZvbHVtZXM6XG4gICAgICAtIG9sbGFtYV9zdG9yYWdlOi9ob21lL25vZGUvLm9sbGFtYVxuICAgIGVudHJ5cG9pbnQ6IC9iaW4vc2hcbiAgICBlbnZpcm9ubWVudDpcbiAgICAgIC0gT0xMQU1BX0hPU1Q9b2xsYW1hOjExNDM0XG4gICAgY29tbWFuZDpcbiAgICAgIC0gXCItY1wiXG4gICAgICAtIFwic2xlZXAgMzsgb2xsYW1hIHB1bGwgbGxhbWEzLjI6bGF0ZXN0OyBvbGxhbWEgcHVsbCBnZW1tYTM6bGF0ZXN0XCJcblxuICByZWRpczpcbiAgICBpbWFnZTogcmVkaXM6Ny1hbHBpbmVcbiAgICByZXN0YXJ0OiB1bmxlc3Mtc3RvcHBlZFxuICAgIGNvbW1hbmQ6IHJlZGlzLXNlcnZlciAtLWFwcGVuZG9ubHkgeWVzXG4gICAgaGVhbHRoY2hlY2s6XG4gICAgICB0ZXN0OiBbXCJDTURcIiwgXCJyZWRpcy1jbGlcIiwgXCJwaW5nXCJdXG4gICAgICBpbnRlcnZhbDogMTBzXG4gICAgICB0aW1lb3V0OiA1c1xuICAgICAgcmV0cmllczogNVxuICAgIHZvbHVtZXM6XG4gICAgICAtIHJlZGlzX3N0b3JhZ2U6L2RhdGFcbiAgICAgIFxuICBwb3N0Z3JlczpcbiAgICBpbWFnZTogcG9zdGdyZXM6MTctYWxwaW5lXG4gICAgaG9zdG5hbWU6IHBvc3RncmVzXG4gICAgcmVzdGFydDogdW5sZXNzLXN0b3BwZWRcbiAgICBlbnZpcm9ubWVudDpcbiAgICAgIC0gUE9TVEdSRVNfVVNFUj0ke1BPU1RHUkVTX1VTRVJ9XG4gICAgICAtIFBPU1RHUkVTX1BBU1NXT1JEPSR7UE9TVEdSRVNfUEFTU1dPUkR9XG4gICAgICAtIFBPU1RHUkVTX0RCPSR7UE9TVEdSRVNfREJ9XG4gICAgdm9sdW1lczpcbiAgICAgIC0gcG9zdGdyZXNfc3RvcmFnZTovdmFyL2xpYi9wb3N0Z3Jlc3FsL2RhdGFcbiAgICBoZWFsdGhjaGVjazpcbiAgICAgIHRlc3Q6IFsnQ01ELVNIRUxMJywgJ3BnX2lzcmVhZHkgLWggbG9jYWxob3N0IC1VICR7UE9TVEdSRVNfVVNFUn0gLWQgJHtQT1NUR1JFU19EQn0nXVxuICAgICAgaW50ZXJ2YWw6IDVzXG4gICAgICB0aW1lb3V0OiA1c1xuICAgICAgcmV0cmllczogMTBcbiAgICAgIFxudm9sdW1lczpcbiAgbjhuX2RhdGE6XG4gIHBvc3RncmVzX3N0b3JhZ2U6XG4gIG9sbGFtYV9zdG9yYWdlOlxuICByZWRpc19zdG9yYWdlOlxuIiwKICAiY29uZmlnIjogIlt2YXJpYWJsZXNdXG5tYWluX2RvbWFpbiA9IFwiJHtkb21haW59XCJcbnBvc3RncmVzX3VzZXIgPSBcIiR7dXNlcm5hbWV9XCJcbnBvc3RncmVzX3Bhc3N3b3JkID0gXCIke3Bhc3N3b3JkOjI0fVwiXG5wb3N0Z3Jlc19kYiA9IFwibjhuXCJcbm44bl9lbmNyeXB0aW9uX2tleSA9IFwiJHtiYXNlNjQ6NjR9XCJcbm44bl9ydW5uZXJfc2VjcmV0ID0gXCIke2Jhc2U2NDo2NH1cIlxuXG5bY29uZmlnXVxubW91bnRzID0gW11cblxuW1tjb25maWcuZG9tYWluc11dXG5zZXJ2aWNlTmFtZSA9IFwibjhuXCJcbnBvcnQgPSA1XzY3OFxuaG9zdCA9IFwiJHttYWluX2RvbWFpbn1cIlxuXG5bY29uZmlnLmVudl1cbk44Tl9IT1NUID0gXCIke21haW5fZG9tYWlufVwiXG5OOE5fUE9SVCA9IFwiNTY3OFwiXG5OOE5fUlVOTkVSU19TRUNSRVQgPSBcIiR7bjhuX3J1bm5lcl9zZWNyZXR9XCJcblxuUFJPWFlfSE9QUyA9IFwiMFwiXG5FTkNSWVBUSU9OX0tFWSA9IFwiJHtuOG5fZW5jcnlwdGlvbl9rZXl9XCJcbkdFTkVSSUNfVElNRVpPTkUgPSBcIkV1cm9wZS9CZXJsaW5cIlxuXG5QT1NUR1JFU19EQiA9IFwiJHtwb3N0Z3Jlc19kYn1cIlxuUE9TVEdSRVNfVVNFUiA9IFwiJHtwb3N0Z3Jlc191c2VyfVwiXG5QT1NUR1JFU19QQVNTV09SRCA9IFwiJHtwb3N0Z3Jlc19wYXNzd29yZH1cIlxuXG5PTExBTUFfSE9TVCA9IFwiaHR0cDovL29sbGFtYToxMTQzNFwiXG5cblNNVFBfSE9TVCA9IFwiXCJcblNNVFBfUE9SVCA9IFwiNTg3XCJcblNNVFBfVVNFUiA9IFwiXCJcblNNVFBfUEFTUyA9IFwiXCIiCn0=
+```
+
+## Links
+
+`ai`,`automation`,`workflow`,`low-code`,`postgres`,`ollama`
+
+---
+
+Version:`latest`
+
+n8nn8n is an open source low-code platform for automating workflows and integrations.
+
+n8n with Postgresn8n is an open source low-code platform for automating workflows and integrations with PostgreSQL database for better performance and scalability.
+
+### On this page
+
+ConfigurationBase64LinksTags

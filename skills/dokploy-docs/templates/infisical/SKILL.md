@@ -1,0 +1,182 @@
+---
+title: "Infisical | Dokploy"
+source: "https://docs.dokploy.com/docs/templates/infisical"
+category: dokploy-docs
+created: "2026-06-25T17:21:49.751Z"
+---
+
+Infisical | Dokploy
+
+# Infisical
+
+Copy as Markdown
+
+All-in-one platform to securely manage application configuration and secrets across your team and infrastructure.
+
+## Configuration
+
+docker-compose.ymltemplate.toml
+
+```
+services:
+  db-migration:
+    depends_on:
+      db:
+        condition: service_healthy
+    image: infisical/infisical:v0.135.0-postgres
+    environment:
+      - NODE_ENV=production
+      - ENCRYPTION_KEY
+      - AUTH_SECRET
+      - SITE_URL
+      - DB_CONNECTION_URI=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379
+      - SMTP_HOST
+      - SMTP_PORT
+      - SMTP_FROM_NAME
+      - SMTP_USERNAME
+      - SMTP_PASSWORD
+      - SMTP_SECURE=true
+    command: npm run migration:latest
+    pull_policy: always
+
+  backend:
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      db-migration:
+        condition: service_completed_successfully
+    image: infisical/infisical:v0.135.0-postgres
+    pull_policy: always
+    environment:
+      - NODE_ENV=production
+      - ENCRYPTION_KEY
+      - AUTH_SECRET
+      - SITE_URL
+      - DB_CONNECTION_URI=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379
+      - SMTP_HOST
+      - SMTP_PORT
+      - SMTP_FROM_NAME
+      - SMTP_USERNAME
+      - SMTP_PASSWORD
+      - SMTP_SECURE=true
+
+  redis:
+    image: redis:7.4.1
+    env_file: .env
+    restart: always
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+
+    volumes:
+      - redis_infisical_data:/data
+
+  db:
+    image: postgres:14-alpine
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD
+      - POSTGRES_USER
+      - POSTGRES_DB
+    volumes:
+      - pg_infisical_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: "pg_isready --username=${POSTGRES_USER} && psql --username=${POSTGRES_USER} --list"
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+volumes:
+  pg_infisical_data:
+  redis_infisical_data:
+```
+
+```
+[variables]
+main_domain = "${domain}"
+postgres_password = "${password}"
+postgres_user = "infisical"
+postgres_db = "infisical"
+
+[config]
+env = [
+  "ENCRYPTION_KEY=6c1fe4e407b8911c104518103505b218",
+  "AUTH_SECRET=5lrMXKKWCVocS/uerPsl7V+TX/aaUaI7iDkgl3tSmLE=",
+  "POSTGRES_PASSWORD=${postgres_password}",
+  "POSTGRES_USER=${postgres_user}",
+  "POSTGRES_DB=${postgres_db}",
+  "SITE_URL=http://${main_domain}:8080",
+  "SMTP_HOST=",
+  "SMTP_PORT=",
+  "SMTP_NAME=",
+  "SMTP_USERNAME=",
+  "SMTP_PASSWORD=",
+  "CLIENT_ID_HEROKU=",
+  "CLIENT_ID_VERCEL=",
+  "CLIENT_ID_NETLIFY=",
+  "CLIENT_ID_GITHUB=",
+  "CLIENT_ID_GITHUB_APP=",
+  "CLIENT_SLUG_GITHUB_APP=",
+  "CLIENT_ID_GITLAB=",
+  "CLIENT_ID_BITBUCKET=",
+  "CLIENT_SECRET_HEROKU=",
+  "CLIENT_SECRET_VERCEL=",
+  "CLIENT_SECRET_NETLIFY=",
+  "CLIENT_SECRET_GITHUB=",
+  "CLIENT_SECRET_GITHUB_APP=",
+  "CLIENT_SECRET_GITLAB=",
+  "CLIENT_SECRET_BITBUCKET=",
+  "CLIENT_SLUG_VERCEL=",
+  "CLIENT_PRIVATE_KEY_GITHUB_APP=",
+  "CLIENT_APP_ID_GITHUB_APP=",
+  "SENTRY_DSN=",
+  "POSTHOG_HOST=",
+  "POSTHOG_PROJECT_API_KEY=",
+  "CLIENT_ID_GOOGLE_LOGIN=",
+  "CLIENT_SECRET_GOOGLE_LOGIN=",
+  "CLIENT_ID_GITHUB_LOGIN=",
+  "CLIENT_SECRET_GITHUB_LOGIN=",
+  "CLIENT_ID_GITLAB_LOGIN=",
+  "CLIENT_SECRET_GITLAB_LOGIN=",
+  "CAPTCHA_SECRET=",
+  "NEXT_PUBLIC_CAPTCHA_SITE_KEY=",
+  "PLAIN_API_KEY=",
+  "PLAIN_WISH_LABEL_IDS=",
+  "SSL_CLIENT_CERTIFICATE_HEADER_KEY=",
+]
+mounts = []
+
+[[config.domains]]
+serviceName = "backend"
+port = 8_080
+host = "${main_domain}"
+```
+
+## Base64
+
+To import this template in Dokploy: create a Compose service → Advanced → Base64 import and paste the content below:
+
+```
+ewogICJjb21wb3NlIjogInNlcnZpY2VzOlxuICBkYi1taWdyYXRpb246XG4gICAgZGVwZW5kc19vbjpcbiAgICAgIGRiOlxuICAgICAgICBjb25kaXRpb246IHNlcnZpY2VfaGVhbHRoeVxuICAgIGltYWdlOiBpbmZpc2ljYWwvaW5maXNpY2FsOnYwLjEzNS4wLXBvc3RncmVzXG4gICAgZW52aXJvbm1lbnQ6XG4gICAgICAtIE5PREVfRU5WPXByb2R1Y3Rpb25cbiAgICAgIC0gRU5DUllQVElPTl9LRVlcbiAgICAgIC0gQVVUSF9TRUNSRVRcbiAgICAgIC0gU0lURV9VUkxcbiAgICAgIC0gREJfQ09OTkVDVElPTl9VUkk9cG9zdGdyZXM6Ly8ke1BPU1RHUkVTX1VTRVJ9OiR7UE9TVEdSRVNfUEFTU1dPUkR9QGRiOjU0MzIvJHtQT1NUR1JFU19EQn1cbiAgICAgIC0gUkVESVNfVVJMPXJlZGlzOi8vcmVkaXM6NjM3OVxuICAgICAgLSBTTVRQX0hPU1RcbiAgICAgIC0gU01UUF9QT1JUXG4gICAgICAtIFNNVFBfRlJPTV9OQU1FXG4gICAgICAtIFNNVFBfVVNFUk5BTUVcbiAgICAgIC0gU01UUF9QQVNTV09SRFxuICAgICAgLSBTTVRQX1NFQ1VSRT10cnVlXG4gICAgY29tbWFuZDogbnBtIHJ1biBtaWdyYXRpb246bGF0ZXN0XG4gICAgcHVsbF9wb2xpY3k6IGFsd2F5c1xuXG4gIGJhY2tlbmQ6XG4gICAgcmVzdGFydDogdW5sZXNzLXN0b3BwZWRcbiAgICBkZXBlbmRzX29uOlxuICAgICAgZGI6XG4gICAgICAgIGNvbmRpdGlvbjogc2VydmljZV9oZWFsdGh5XG4gICAgICByZWRpczpcbiAgICAgICAgY29uZGl0aW9uOiBzZXJ2aWNlX3N0YXJ0ZWRcbiAgICAgIGRiLW1pZ3JhdGlvbjpcbiAgICAgICAgY29uZGl0aW9uOiBzZXJ2aWNlX2NvbXBsZXRlZF9zdWNjZXNzZnVsbHlcbiAgICBpbWFnZTogaW5maXNpY2FsL2luZmlzaWNhbDp2MC4xMzUuMC1wb3N0Z3Jlc1xuICAgIHB1bGxfcG9saWN5OiBhbHdheXNcbiAgICBlbnZpcm9ubWVudDpcbiAgICAgIC0gTk9ERV9FTlY9cHJvZHVjdGlvblxuICAgICAgLSBFTkNSWVBUSU9OX0tFWVxuICAgICAgLSBBVVRIX1NFQ1JFVFxuICAgICAgLSBTSVRFX1VSTFxuICAgICAgLSBEQl9DT05ORUNUSU9OX1VSST1wb3N0Z3JlczovLyR7UE9TVEdSRVNfVVNFUn06JHtQT1NUR1JFU19QQVNTV09SRH1AZGI6NTQzMi8ke1BPU1RHUkVTX0RCfVxuICAgICAgLSBSRURJU19VUkw9cmVkaXM6Ly9yZWRpczo2Mzc5XG4gICAgICAtIFNNVFBfSE9TVFxuICAgICAgLSBTTVRQX1BPUlRcbiAgICAgIC0gU01UUF9GUk9NX05BTUVcbiAgICAgIC0gU01UUF9VU0VSTkFNRVxuICAgICAgLSBTTVRQX1BBU1NXT1JEXG4gICAgICAtIFNNVFBfU0VDVVJFPXRydWVcblxuXG4gIHJlZGlzOlxuICAgIGltYWdlOiByZWRpczo3LjQuMVxuICAgIGVudl9maWxlOiAuZW52XG4gICAgcmVzdGFydDogYWx3YXlzXG4gICAgZW52aXJvbm1lbnQ6XG4gICAgICAtIEFMTE9XX0VNUFRZX1BBU1NXT1JEPXllc1xuXG4gICAgdm9sdW1lczpcbiAgICAgIC0gcmVkaXNfaW5maXNpY2FsX2RhdGE6L2RhdGFcblxuICBkYjpcbiAgICBpbWFnZTogcG9zdGdyZXM6MTQtYWxwaW5lXG4gICAgcmVzdGFydDogYWx3YXlzXG4gICAgZW52aXJvbm1lbnQ6XG4gICAgICAtIFBPU1RHUkVTX1BBU1NXT1JEXG4gICAgICAtIFBPU1RHUkVTX1VTRVJcbiAgICAgIC0gUE9TVEdSRVNfREJcbiAgICB2b2x1bWVzOlxuICAgICAgLSBwZ19pbmZpc2ljYWxfZGF0YTovdmFyL2xpYi9wb3N0Z3Jlc3FsL2RhdGFcblxuICAgIGhlYWx0aGNoZWNrOlxuICAgICAgdGVzdDogXCJwZ19pc3JlYWR5IC0tdXNlcm5hbWU9JHtQT1NUR1JFU19VU0VSfSAmJiBwc3FsIC0tdXNlcm5hbWU9JHtQT1NUR1JFU19VU0VSfSAtLWxpc3RcIlxuICAgICAgaW50ZXJ2YWw6IDVzXG4gICAgICB0aW1lb3V0OiAxMHNcbiAgICAgIHJldHJpZXM6IDEwXG5cbnZvbHVtZXM6XG4gIHBnX2luZmlzaWNhbF9kYXRhOlxuICByZWRpc19pbmZpc2ljYWxfZGF0YTpcblxuXG5cbiIsCiAgImNvbmZpZyI6ICJbdmFyaWFibGVzXVxubWFpbl9kb21haW4gPSBcIiR7ZG9tYWlufVwiXG5wb3N0Z3Jlc19wYXNzd29yZCA9IFwiJHtwYXNzd29yZH1cIlxucG9zdGdyZXNfdXNlciA9IFwiaW5maXNpY2FsXCJcbnBvc3RncmVzX2RiID0gXCJpbmZpc2ljYWxcIlxuXG5bY29uZmlnXVxuZW52ID0gW1xuICBcIkVOQ1JZUFRJT05fS0VZPTZjMWZlNGU0MDdiODkxMWMxMDQ1MTgxMDM1MDViMjE4XCIsXG4gIFwiQVVUSF9TRUNSRVQ9NWxyTVhLS1dDVm9jUy91ZXJQc2w3VitUWC9hYVVhSTdpRGtnbDN0U21MRT1cIixcbiAgXCJQT1NUR1JFU19QQVNTV09SRD0ke3Bvc3RncmVzX3Bhc3N3b3JkfVwiLFxuICBcIlBPU1RHUkVTX1VTRVI9JHtwb3N0Z3Jlc191c2VyfVwiLFxuICBcIlBPU1RHUkVTX0RCPSR7cG9zdGdyZXNfZGJ9XCIsXG4gIFwiU0lURV9VUkw9aHR0cDovLyR7bWFpbl9kb21haW59OjgwODBcIixcbiAgXCJTTVRQX0hPU1Q9XCIsXG4gIFwiU01UUF9QT1JUPVwiLFxuICBcIlNNVFBfTkFNRT1cIixcbiAgXCJTTVRQX1VTRVJOQU1FPVwiLFxuICBcIlNNVFBfUEFTU1dPUkQ9XCIsXG4gIFwiQ0xJRU5UX0lEX0hFUk9LVT1cIixcbiAgXCJDTElFTlRfSURfVkVSQ0VMPVwiLFxuICBcIkNMSUVOVF9JRF9ORVRMSUZZPVwiLFxuICBcIkNMSUVOVF9JRF9HSVRIVUI9XCIsXG4gIFwiQ0xJRU5UX0lEX0dJVEhVQl9BUFA9XCIsXG4gIFwiQ0xJRU5UX1NMVUdfR0lUSFVCX0FQUD1cIixcbiAgXCJDTElFTlRfSURfR0lUTEFCPVwiLFxuICBcIkNMSUVOVF9JRF9CSVRCVUNLRVQ9XCIsXG4gIFwiQ0xJRU5UX1NFQ1JFVF9IRVJPS1U9XCIsXG4gIFwiQ0xJRU5UX1NFQ1JFVF9WRVJDRUw9XCIsXG4gIFwiQ0xJRU5UX1NFQ1JFVF9ORVRMSUZZPVwiLFxuICBcIkNMSUVOVF9TRUNSRVRfR0lUSFVCPVwiLFxuICBcIkNMSUVOVF9TRUNSRVRfR0lUSFVCX0FQUD1cIixcbiAgXCJDTElFTlRfU0VDUkVUX0dJVExBQj1cIixcbiAgXCJDTElFTlRfU0VDUkVUX0JJVEJVQ0tFVD1cIixcbiAgXCJDTElFTlRfU0xVR19WRVJDRUw9XCIsXG4gIFwiQ0xJRU5UX1BSSVZBVEVfS0VZX0dJVEhVQl9BUFA9XCIsXG4gIFwiQ0xJRU5UX0FQUF9JRF9HSVRIVUJfQVBQPVwiLFxuICBcIlNFTlRSWV9EU049XCIsXG4gIFwiUE9TVEhPR19IT1NUPVwiLFxuICBcIlBPU1RIT0dfUFJPSkVDVF9BUElfS0VZPVwiLFxuICBcIkNMSUVOVF9JRF9HT09HTEVfTE9HSU49XCIsXG4gIFwiQ0xJRU5UX1NFQ1JFVF9HT09HTEVfTE9HSU49XCIsXG4gIFwiQ0xJRU5UX0lEX0dJVEhVQl9MT0dJTj1cIixcbiAgXCJDTElFTlRfU0VDUkVUX0dJVEhVQl9MT0dJTj1cIixcbiAgXCJDTElFTlRfSURfR0lUTEFCX0xPR0lOPVwiLFxuICBcIkNMSUVOVF9TRUNSRVRfR0lUTEFCX0xPR0lOPVwiLFxuICBcIkNBUFRDSEFfU0VDUkVUPVwiLFxuICBcIk5FWFRfUFVCTElDX0NBUFRDSEFfU0lURV9LRVk9XCIsXG4gIFwiUExBSU5fQVBJX0tFWT1cIixcbiAgXCJQTEFJTl9XSVNIX0xBQkVMX0lEUz1cIixcbiAgXCJTU0xfQ0xJRU5UX0NFUlRJRklDQVRFX0hFQURFUl9LRVk9XCIsXG5dXG5tb3VudHMgPSBbXVxuXG5bW2NvbmZpZy5kb21haW5zXV1cbnNlcnZpY2VOYW1lID0gXCJiYWNrZW5kXCJcbnBvcnQgPSA4XzA4MFxuaG9zdCA9IFwiJHttYWluX2RvbWFpbn1cIlxuIgp9
+```
+
+## Links
+
+`self-hosted`,`open-source`
+
+---
+
+Version:`0.135.0`
+
+ImmichHigh performance self-hosted photo and video backup solution directly from your mobile phone.
+
+InfluxDBInfluxDB 2.7 is the platform purpose-built to collect, store, process and visualize time series data.
+
+### On this page
+
+ConfigurationBase64LinksTags

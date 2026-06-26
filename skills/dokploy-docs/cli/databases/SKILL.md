@@ -1,0 +1,65 @@
+---
+title: "Databases | Dokploy"
+source: "https://docs.dokploy.com/docs/cli/databases"
+category: dokploy-docs
+created: "2026-06-25T17:16:08.647Z"
+---
+
+Databases | Dokploy
+
+# Databases
+
+Copy as Markdown
+
+A guide to using the Dokploy CLI to manage databases
+
+The Dokploy CLI can be used to create, deploy, and manage databases.
+
+## Requirements
+
+Is required to be already authenticated with the Dokploy CLI.
+
+## Commands
+
+### MariaDB
+
+1. `dokploy database mariadb create`- Create a new mariadb database.
+2. `dokploy database mariadb delete`- Delete an mariadb database.
+3. `dokploy database mariadb deploy`- Deploy a mariadb database.
+4. `dokploy database mariadb stop`- Stop a running mariadb database.
+
+### PostgreSQL
+
+1. `dokploy database postgresql create`- Create a new postgresql database.
+2. `dokploy database postgresql delete`- Delete an postgresql database.
+3. `dokploy database postgresql deploy`- Deploy a postgresql database.
+4. `dokploy database postgresql stop`- Stop a running postgresql database.
+
+### MySQL
+
+1. `dokploy database mysql create`- Create a new mysql database.
+2. `dokploy database mysql delete`- Delete an mysql database.
+3. `dokploy database mysql deploy`- Deploy a mysql database.
+4. `dokploy database mysql stop`- Stop a running mysql database.
+
+### MongoDB
+
+1. `dokploy database mongodb create`- Create a new mongodb database.
+2. `dokploy database mongodb delete`- Delete an mongodb database.
+3. `dokploy database mongodb deploy`- Deploy a mongodb database.
+4. `dokploy database mongodb stop`- Stop a running mongodb database.
+
+### Redis
+
+1. `dokploy database redis create`- Create a new redis database.
+2. `dokploy database redis delete`- Delete an redis database.
+3. `dokploy database redis deploy`- Deploy a redis database.
+4. `dokploy database redis stop`- Stop a running redis database.
+
+AuthenticationA guide to authenticating with the Dokploy CLI
+
+EnviromentA guide to using the Dokploy CLI to manage enviroment
+
+### On this page
+
+RequirementsCommandsMariaDBPostgreSQLMySQLMongoDBRedis

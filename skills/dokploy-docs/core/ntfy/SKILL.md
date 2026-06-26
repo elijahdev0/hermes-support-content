@@ -1,0 +1,38 @@
+---
+title: "Ntfy | Dokploy"
+source: "https://docs.dokploy.com/docs/core/ntfy"
+category: dokploy-docs
+created: "2026-06-25T17:21:38.072Z"
+---
+
+Ntfy | Dokploy
+
+Notifications
+
+# Ntfy
+
+Copy as Markdown
+
+Configure ntfy notifications for your applications.
+
+Ntfy notifications are a great way to stay up to date with important events in your Dokploy panel. You can choose to receive notifications for specific events or all events.
+
+## Ntfy Notifications
+
+For start receiving ntfy notifications, you need to fill the form with the following details:
+
+- Name: Enter any name you want.
+- Server URL: Enter the ntfy server URL. eg.`https://ntfy.example.com`
+- Access Token: Enter the ntfy token. You can create one under`https://ntfy.example.com/account`
+- Topic: Enter the topic you want the notifications to be received.
+- Priority: Enter the priority of the notification, default is`3`(1-5).
+
+To Setup the ntfy notifications, you can read the Notify Documentation.
+
+GotifyConfigure gotify notifications for your applications.
+
+PushoverConfigure Pushover notifications for your applications.
+
+### On this page
+
+Ntfy Notifications

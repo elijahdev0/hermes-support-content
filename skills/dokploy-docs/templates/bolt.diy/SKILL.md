@@ -1,0 +1,96 @@
+---
+title: "bolt.diy | Dokploy"
+source: "https://docs.dokploy.com/docs/templates/bolt.diy"
+category: dokploy-docs
+created: "2026-06-25T17:21:42.676Z"
+---
+
+bolt.diy | Dokploy
+
+# bolt.diy
+
+Copy as Markdown
+
+Prompt, run, edit, and deploy full-stack web applications using any LLM you want!
+
+## Configuration
+
+docker-compose.ymltemplate.toml
+
+```
+services:
+  app:
+    image: ghcr.io/stackblitz-labs/bolt.diy:latest
+    environment:
+      - NODE_ENV=production
+      - COMPOSE_PROFILES=production
+      - PORT=5173
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - HuggingFace_API_KEY=${HuggingFace_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPEN_ROUTER_API_KEY=${OPEN_ROUTER_API_KEY}
+      - GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY}
+      - OLLAMA_API_BASE_URL=${OLLAMA_API_BASE_URL}
+      - XAI_API_KEY=${XAI_API_KEY}
+      - TOGETHER_API_KEY=${TOGETHER_API_KEY}
+      - TOGETHER_API_BASE_URL=${TOGETHER_API_BASE_URL}
+      - AWS_BEDROCK_CONFIG=${AWS_BEDROCK_CONFIG}
+      - VITE_LOG_LEVEL=${VITE_LOG_LEVEL:-info}
+      - DEFAULT_NUM_CTX=${DEFAULT_NUM_CTX:-32768}
+      - RUNNING_IN_DOCKER=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: pnpm run dockerstart
+```
+
+```
+[variables]
+main_domain = "${domain}"
+
+[config]
+mounts = []
+
+[[config.domains]]
+serviceName = "app"
+port = 5173
+host = "${main_domain}"
+
+[config.env]
+GROQ_API_KEY = ""
+HuggingFace_API_KEY = ""
+OPENAI_API_KEY = ""
+ANTHROPIC_API_KEY = ""
+OPEN_ROUTER_API_KEY = ""
+GOOGLE_GENERATIVE_AI_API_KEY = ""
+OLLAMA_API_BASE_URL = "http://127.0.0.1:11434"
+XAI_API_KEY = ""
+TOGETHER_API_KEY = ""
+TOGETHER_API_BASE_URL = ""
+AWS_BEDROCK_CONFIG = ""
+DEFAULT_NUM_CTX = 32768
+```
+
+## Base64
+
+To import this template in Dokploy: create a Compose service → Advanced → Base64 import and paste the content below:
+
+```
+ewogICJjb21wb3NlIjogInNlcnZpY2VzOlxuICBhcHA6XG4gICAgaW1hZ2U6IGdoY3IuaW8vc3RhY2tibGl0ei1sYWJzL2JvbHQuZGl5OmxhdGVzdFxuICAgIGVudmlyb25tZW50OlxuICAgICAgLSBOT0RFX0VOVj1wcm9kdWN0aW9uXG4gICAgICAtIENPTVBPU0VfUFJPRklMRVM9cHJvZHVjdGlvblxuICAgICAgLSBQT1JUPTUxNzNcbiAgICAgIC0gR1JPUV9BUElfS0VZPSR7R1JPUV9BUElfS0VZfVxuICAgICAgLSBIdWdnaW5nRmFjZV9BUElfS0VZPSR7SHVnZ2luZ0ZhY2VfQVBJX0tFWX1cbiAgICAgIC0gT1BFTkFJX0FQSV9LRVk9JHtPUEVOQUlfQVBJX0tFWX1cbiAgICAgIC0gQU5USFJPUElDX0FQSV9LRVk9JHtBTlRIUk9QSUNfQVBJX0tFWX1cbiAgICAgIC0gT1BFTl9ST1VURVJfQVBJX0tFWT0ke09QRU5fUk9VVEVSX0FQSV9LRVl9XG4gICAgICAtIEdPT0dMRV9HRU5FUkFUSVZFX0FJX0FQSV9LRVk9JHtHT09HTEVfR0VORVJBVElWRV9BSV9BUElfS0VZfVxuICAgICAgLSBPTExBTUFfQVBJX0JBU0VfVVJMPSR7T0xMQU1BX0FQSV9CQVNFX1VSTH1cbiAgICAgIC0gWEFJX0FQSV9LRVk9JHtYQUlfQVBJX0tFWX1cbiAgICAgIC0gVE9HRVRIRVJfQVBJX0tFWT0ke1RPR0VUSEVSX0FQSV9LRVl9XG4gICAgICAtIFRPR0VUSEVSX0FQSV9CQVNFX1VSTD0ke1RPR0VUSEVSX0FQSV9CQVNFX1VSTH1cbiAgICAgIC0gQVdTX0JFRFJPQ0tfQ09ORklHPSR7QVdTX0JFRFJPQ0tfQ09ORklHfVxuICAgICAgLSBWSVRFX0xPR19MRVZFTD0ke1ZJVEVfTE9HX0xFVkVMOi1pbmZvfVxuICAgICAgLSBERUZBVUxUX05VTV9DVFg9JHtERUZBVUxUX05VTV9DVFg6LTMyNzY4fVxuICAgICAgLSBSVU5OSU5HX0lOX0RPQ0tFUj10cnVlXG4gICAgZXh0cmFfaG9zdHM6XG4gICAgICAtIFwiaG9zdC5kb2NrZXIuaW50ZXJuYWw6aG9zdC1nYXRld2F5XCJcbiAgICBjb21tYW5kOiBwbnBtIHJ1biBkb2NrZXJzdGFydFxuIiwKICAiY29uZmlnIjogIlt2YXJpYWJsZXNdXG5tYWluX2RvbWFpbiA9IFwiJHtkb21haW59XCJcblxuW2NvbmZpZ11cbm1vdW50cyA9IFtdXG5cbltbY29uZmlnLmRvbWFpbnNdXVxuc2VydmljZU5hbWUgPSBcImFwcFwiXG5wb3J0ID0gNTE3M1xuaG9zdCA9IFwiJHttYWluX2RvbWFpbn1cIlxuXG5bY29uZmlnLmVudl1cbkdST1FfQVBJX0tFWSA9IFwiXCJcbkh1Z2dpbmdGYWNlX0FQSV9LRVkgPSBcIlwiXG5PUEVOQUlfQVBJX0tFWSA9IFwiXCJcbkFOVEhST1BJQ19BUElfS0VZID0gXCJcIlxuT1BFTl9ST1VURVJfQVBJX0tFWSA9IFwiXCJcbkdPT0dMRV9HRU5FUkFUSVZFX0FJX0FQSV9LRVkgPSBcIlwiXG5PTExBTUFfQVBJX0JBU0VfVVJMID0gXCJodHRwOi8vMTI3LjAuMC4xOjExNDM0XCJcblhBSV9BUElfS0VZID0gXCJcIlxuVE9HRVRIRVJfQVBJX0tFWSA9IFwiXCJcblRPR0VUSEVSX0FQSV9CQVNFX1VSTCA9IFwiXCJcbkFXU19CRURST0NLX0NPTkZJRyA9IFwiXCJcbkRFRkFVTFRfTlVNX0NUWCA9IDMyNzY4XG4iCn0=
+```
+
+## Links
+
+`ai`,`self-hosted`,`development`,`chatbot`,`ide`,`llm`
+
+---
+
+Version:`latest`
+
+Bluesky PDSBluesky PDS is a personal data server for Bluesky.
+
+BookloreBooklore is an application for managing and serving book-related data, backed by a MariaDB database.
+
+### On this page
+
+ConfigurationBase64LinksTags

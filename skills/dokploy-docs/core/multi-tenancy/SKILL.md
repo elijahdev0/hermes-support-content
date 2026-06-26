@@ -1,0 +1,250 @@
+---
+title: "Multi-Tenancy | Dokploy"
+source: "https://docs.dokploy.com/docs/core/multi-tenancy"
+category: dokploy-docs
+created: "2026-06-25T17:21:36.902Z"
+---
+
+Multi-Tenancy | Dokploy
+
+# Multi-Tenancy
+
+Copy as Markdown
+
+Understand how Dokploy organizes resources using Organizations, Projects, Environments, and Services for team collaboration and resource isolation.
+
+Dokploy provides a hierarchical multi-tenancy model that lets you organize your infrastructure cleanly — whether you're a solo developer or managing multiple teams. This guide explains how Organizations, Projects, Environments, and Services work together.
+
+## Resource Hierarchy
+
+Dokploy organizes all resources in a four-level hierarchy:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      ORGANIZATION                           │
+│  The top-level tenant. All users, billing, and settings     │
+│  belong to an organization.                                 │
+│                                                             │
+│  ┌────────────────────────┐  ┌────────────────────────┐     │
+│  │      PROJECT A         │  │      PROJECT B         │     │
+│  │                        │  │                        │     │
+│  │  ┌──────────────────┐  │  │  ┌──────────────────┐  │     │
+│  │  │  Environment:    │  │  │  │  Environment:    │  │     │
+│  │  │  Production      │  │  │  │  Production      │  │     │
+│  │  │                  │  │  │  │                  │  │     │
+│  │  │  ┌────────────┐  │  │  │  │  ┌────────────┐  │  │     │
+│  │  │  │ App (Next) │  │  │  │  │  │ App (Go)   │  │  │     │
+│  │  │  ├────────────┤  │  │  │  │  ├────────────┤  │  │     │
+│  │  │  │ PostgreSQL │  │  │  │  │  │ Redis      │  │  │     │
+│  │  │  ├────────────┤  │  │  │  │  │            │  │  │     │
+│  │  │  │ Redis      │  │  │  │  │  └────────────┘  │  │     │
+│  │  │  └────────────┘  │  │  │  └──────────────────┘  │     │
+│  │  └──────────────────┘  │  │                        │     │
+│  │                        │  │  ┌──────────────────┐  │     │
+│  │  ┌──────────────────┐  │  │  │  Environment:    │  │     │
+│  │  │  Environment:    │  │  │  │  Staging         │  │     │
+│  │  │  Staging         │  │  │  │                  │  │     │
+│  │  │                  │  │  │  │  ┌────────────┐  │  │     │
+│  │  │  ┌────────────┐  │  │  │  │  │ App (Go)   │  │  │     │
+│  │  │  │ App (Next) │  │  │  │  │  │            │  │  │     │
+│  │  │  ├────────────┤  │  │  │  │  └────────────┘  │  │     │
+│  │  │  │ PostgreSQL │  │  │  │  └──────────────────┘  │     │
+│  │  │  └────────────┘  │  │  │                        │     │
+│  │  └──────────────────┘  │  │                        │     │
+│  └────────────────────────┘  └────────────────────────┘     │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### How it flows
+
+```
+Organization ──► Project ──► Environment ──► Service
+     │               │            │              │
+  Users &        Logical      Isolation       Apps,
+  Billing        grouping     layer           Databases,
+                 of work      (prod/stg/dev)  Compose
+```
+
+## Organization
+
+The Organization is the top-level container in Dokploy. Everything — users, projects, servers, settings — belongs to an organization.
+
+- Each Dokploy instance starts with one default organization created during setup.
+- The user who installs Dokploy becomes the Owner of that organization.
+- All billing, SSO configuration, and global settings are scoped to the organization.
+
+### Key capabilities
+
+| Feature | Description |
+| --- | --- |
+| User Management | Invite members, assign roles (Owner, Admin, Member, or custom roles) |
+| SSO Integration | Connect Auth0, Azure AD, Keycloak, Okta, or Zitadel (Enterprise) |
+| Global Settings | Manage servers, registries, SSH keys, certificates, and S3 destinations |
+| Audit Logs | Track all actions performed by organization members (Enterprise) |
+
+## Projects
+
+A Project is a logical grouping of related services. Think of it as a workspace for a specific product, client, or initiative.
+
+- Projects live inside an organization.
+- Each project can contain multiple environments.
+- Projects have their own shared environment variables that are inherited by all services within.
+
+### Common project structures
+
+```
+# By product
+├── Project: "Marketing Website"
+├── Project: "Mobile API"
+└── Project: "Internal Tools"
+
+# By client (agencies)
+├── Project: "Client: Acme Corp"
+├── Project: "Client: Globex Inc"
+└── Project: "Internal Projects"
+
+# By team
+├── Project: "Frontend Team"
+├── Project: "Backend Team"
+└── Project: "Data Pipeline"
+```
+
+### Creating a project
+
+1. Go to the Dashboard.
+2. Click Create Project.
+3. Enter a name and optional description.
+
+Projects are the primary unit for access control. You can grant members access to specific projects without exposing the rest of your infrastructure.
+
+## Environments
+
+Environments provide isolation within a project. They allow you to run the same services in different configurations (production, staging, development) without interference.
+
+- Each project starts with a default environment.
+- You can create additional environments as needed.
+- Environments have their own shared environment variables that override project-level variables.
+- Services in different environments are completely isolated from each other.
+
+### Environment use cases
+
+| Pattern | Environments | Purpose |
+| --- | --- | --- |
+| Standard | `production`,`staging` | Classic deploy pipeline |
+| Feature branches | `production`,`staging`,`feature-x` | Test features in isolation |
+| Regional | `us-east`,`eu-west`,`ap-south` | Multi-region deployments |
+| Per-client | `client-a`,`client-b` | Client-specific configurations |
+
+### Variable inheritance
+
+Environment variables flow downward through the hierarchy with the ability to override at each level:
+
+```
+Organization
+  └── Project (shared variables: DATABASE_HOST=db.internal)
+        ├── Environment: Production (override: DATABASE_HOST=db-prod.internal)
+        │     └── Service: API (uses DATABASE_HOST=db-prod.internal)
+        │
+        └── Environment: Staging (no override)
+              └── Service: API (uses DATABASE_HOST=db.internal)
+```
+
+Environment-level variables take precedence over project-level variables. Service-level variables take precedence over both.
+
+## Services
+
+Services are the actual workloads running inside an environment. Dokploy supports three types of services:
+
+### Service types
+
+| Type | Description | Examples |
+| --- | --- | --- |
+| Application | Your custom app deployed from Git or Docker | Next.js app, Go API, Python worker |
+| Database | Managed database instances | PostgreSQL, MySQL, MongoDB, Redis, MariaDB |
+| Docker Compose | Multi-container stacks defined via`docker-compose.yml` | WordPress + MySQL, ELK stack |
+
+Each service gets its own:
+
+- Domains — Custom domains with automatic SSL via Traefik
+- Environment Variables — Service-specific configuration
+- Deployments — Independent deploy history and rollbacks
+- Logs & Monitoring — Per-service resource metrics
+- Backups — Automated database backups (for database services)
+
+## Access Control
+
+Dokploy's permission system maps directly to this hierarchy, allowing you to control who can see and do what at every level.
+
+### Role hierarchy
+
+```
+Owner (full control)
+  │
+  ├── Admin (full control, cannot manage other admins/owner)
+  │
+  ├── Member (limited, configurable permissions)
+  │     ├── Can be granted access to specific Projects
+  │     ├── Can be granted access to specific Environments
+  │     └── Permissions are configurable per resource type
+  │
+  └── Custom Role (Enterprise)
+        └── Fine-grained permissions across 25+ categories
+```
+
+### Permission scoping
+
+| Level | What you can control |
+| --- | --- |
+| Organization | Who can manage users, servers, registries, SSH keys, certificates |
+| Project | Who can view/create/delete projects and their services |
+| Environment | Who can access specific environments (e.g., only production) |
+| Service | Who can deploy, view logs, manage environment variables |
+
+For detailed permission configuration, see Permissions. For enterprise custom roles, see Custom Roles.
+
+## Best Practices
+
+### Naming conventions
+
+Use consistent, descriptive names across your hierarchy:
+
+```
+Organization: "Acme Corp"
+  └── Project: "acme-ecommerce"
+        ├── Environment: "production"
+        │     ├── Service: "storefront"        (Application)
+        │     ├── Service: "api"               (Application)
+        │     ├── Service: "postgres-main"     (Database)
+        │     └── Service: "redis-cache"       (Database)
+        │
+        └── Environment: "staging"
+              ├── Service: "storefront"
+              ├── Service: "api"
+              └── Service: "postgres-main"
+```
+
+### Separation strategies
+
+| Strategy | When to use | Example |
+| --- | --- | --- |
+| One project per product | You have distinct products with separate teams | `website`,`mobile-api`,`admin-panel` |
+| One project per client | You're an agency or MSP managing multiple clients | `client-acme`,`client-globex` |
+| One environment per stage | Standard dev → staging → production workflow | `development`,`staging`,`production` |
+| One environment per feature | You want isolated testing of features before merge | `feature-auth-v2`,`feature-payments` |
+
+### Security recommendations
+
+1. Principle of least privilege — Only grant the minimum permissions each user needs.
+2. Use environments for isolation — Never run staging and production services in the same environment.
+3. Scope variables properly — Put shared secrets at the project level, environment-specific values at the environment level.
+4. Audit regularly — Review user access and permissions periodically, especially when team members change roles. Use Audit Logs(Enterprise) to track changes.
+5. Use custom roles — If the default roles don't fit your needs, create Custom Roles(Enterprise) with exactly the permissions required.
+
+GoodiesDokploy has certain goodies that are external that can be used with Dokploy.
+
+TroubleshootingSolve the most common problems that occur when using Dokploy.
+
+### On this page
+
+Resource HierarchyHow it flowsOrganizationKey capabilitiesProjectsCommon project structuresCreating a projectEnvironmentsEnvironment use casesVariable inheritanceServicesService typesAccess ControlRole hierarchyPermission scopingBest PracticesNaming conventionsSeparation strategiesSecurity recommendations

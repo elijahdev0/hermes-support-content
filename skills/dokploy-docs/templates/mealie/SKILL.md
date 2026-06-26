@@ -1,0 +1,120 @@
+---
+title: "Mealie (sqlite version) | Dokploy"
+source: "https://docs.dokploy.com/docs/templates/mealie"
+category: dokploy-docs
+created: "2026-06-25T17:21:53.155Z"
+---
+
+Mealie (sqlite version) | Dokploy
+
+# Mealie (sqlite version)
+
+Copy as Markdown
+
+Mealie is an intuitive and easy to use recipe management app. It's designed to make your life easier by being the best recipes management experience on the web and providing you with an easy to use interface to manage your growing collection of recipes.
+
+## Configuration
+
+docker-compose.ymltemplate.toml
+
+```
+services:
+  mealie:
+    image: ghcr.io/mealie-recipes/mealie:latest
+    deploy:
+      resources:
+        limits:
+          memory: 1000M
+    volumes:
+      - mealie-data:/app/data/
+    environment:
+      PUID: 1000
+      PGID: 1000
+
+      # Basic settings
+      BASE_URL: ${BASE_URL}
+      API_DOCS: ${API_DOCS}
+      ALLOW_SIGNUP: ${ALLOW_SIGNUP}
+      DEFAULT_GROUP: ${DEFAULT_GROUP}
+      DEFAULT_HOUSEHOLD: ${DEFAULT_HOUSEHOLD}
+      TZ: ${TZ}
+      SECURITY_MAX_LOGIN_ATTEMPTS: ${SECURITY_MAX_LOGIN_ATTEMPTS}
+      SECURITY_USER_LOCKOUT_TIME: ${SECURITY_USER_LOCKOUT_TIME}
+      DAILY_SCHEDULE_TIME: ${DAILY_SCHEDULE_TIME}
+
+      # Email settings
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_AUTH_STRATEGY: ${SMTP_AUTH_STRATEGY}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+
+volumes:
+  mealie-data: {}
+```
+
+```
+[variables]
+main_domain = "${domain}"
+TZ = "Europe/London"
+BASE_URL = "https://${main_domain}"
+SMTP_HOST = ""
+SMTP_PORT = "587"
+SMTP_AUTH_STRATEGY = "TLS"
+SMTP_FROM_NAME = "Mealie"
+SMTP_FROM_EMAIL = ""
+SMTP_USER = ""
+SMTP_PASSWORD = ""
+API_DOCS = "False"
+ALLOW_SIGNUP = "false"
+
+[config]
+[[config.domains]]
+serviceName = "mealie"
+port = 9000
+host = "${main_domain}"
+
+[config.env]
+BASE_URL = "${BASE_URL}"
+TZ = "${TZ}"
+DEFAULT_GROUP = "Home"
+DEFAULT_HOUSEHOLD = "Family"
+API_DOCS = "${API_DOCS}"
+SECURITY_MAX_LOGIN_ATTEMPTS = "10"
+SECURITY_USER_LOCKOUT_TIME = "24"
+DAILY_SCHEDULE_TIME = "01:00"
+ALLOW_SIGNUP = "${ALLOW_SIGNUP}"
+SMTP_HOST = "${SMTP_HOST}"
+SMTP_PORT = "${SMTP_PORT}"
+SMTP_AUTH_STRATEGY = "${SMTP_AUTH_STRATEGY}"
+SMTP_FROM_NAME = "${SMTP_FROM_NAME}"
+SMTP_FROM_EMAIL = "${SMTP_FROM_EMAIL}"
+SMTP_USER = "${SMTP_USER}"
+SMTP_PASSWORD = "${SMTP_PASSWORD}"
+```
+
+## Base64
+
+To import this template in Dokploy: create a Compose service → Advanced → Base64 import and paste the content below:
+
+```
+ewogICJjb21wb3NlIjogInNlcnZpY2VzOlxuICBtZWFsaWU6XG4gICAgaW1hZ2U6IGdoY3IuaW8vbWVhbGllLXJlY2lwZXMvbWVhbGllOmxhdGVzdFxuICAgIGRlcGxveTpcbiAgICAgIHJlc291cmNlczpcbiAgICAgICAgbGltaXRzOlxuICAgICAgICAgIG1lbW9yeTogMTAwME1cbiAgICB2b2x1bWVzOlxuICAgICAgLSBtZWFsaWUtZGF0YTovYXBwL2RhdGEvXG4gICAgZW52aXJvbm1lbnQ6XG4gICAgICBQVUlEOiAxMDAwXG4gICAgICBQR0lEOiAxMDAwXG5cbiAgICAgICMgQmFzaWMgc2V0dGluZ3NcbiAgICAgIEJBU0VfVVJMOiAke0JBU0VfVVJMfVxuICAgICAgQVBJX0RPQ1M6ICR7QVBJX0RPQ1N9XG4gICAgICBBTExPV19TSUdOVVA6ICR7QUxMT1dfU0lHTlVQfVxuICAgICAgREVGQVVMVF9HUk9VUDogJHtERUZBVUxUX0dST1VQfVxuICAgICAgREVGQVVMVF9IT1VTRUhPTEQ6ICR7REVGQVVMVF9IT1VTRUhPTER9XG4gICAgICBUWjogJHtUWn1cbiAgICAgIFNFQ1VSSVRZX01BWF9MT0dJTl9BVFRFTVBUUzogJHtTRUNVUklUWV9NQVhfTE9HSU5fQVRURU1QVFN9XG4gICAgICBTRUNVUklUWV9VU0VSX0xPQ0tPVVRfVElNRTogJHtTRUNVUklUWV9VU0VSX0xPQ0tPVVRfVElNRX1cbiAgICAgIERBSUxZX1NDSEVEVUxFX1RJTUU6ICR7REFJTFlfU0NIRURVTEVfVElNRX1cblxuICAgICAgIyBFbWFpbCBzZXR0aW5nc1xuICAgICAgU01UUF9IT1NUOiAke1NNVFBfSE9TVH1cbiAgICAgIFNNVFBfUE9SVDogJHtTTVRQX1BPUlR9XG4gICAgICBTTVRQX0FVVEhfU1RSQVRFR1k6ICR7U01UUF9BVVRIX1NUUkFURUdZfVxuICAgICAgU01UUF9GUk9NX05BTUU6ICR7U01UUF9GUk9NX05BTUV9XG4gICAgICBTTVRQX0ZST01fRU1BSUw6ICR7U01UUF9GUk9NX0VNQUlMfVxuICAgICAgU01UUF9VU0VSOiAke1NNVFBfVVNFUn1cbiAgICAgIFNNVFBfUEFTU1dPUkQ6ICR7U01UUF9QQVNTV09SRH1cblxudm9sdW1lczpcbiAgbWVhbGllLWRhdGE6IHt9XG4iLAogICJjb25maWciOiAiW3ZhcmlhYmxlc11cbm1haW5fZG9tYWluID0gXCIke2RvbWFpbn1cIlxuVFogPSBcIkV1cm9wZS9Mb25kb25cIlxuQkFTRV9VUkwgPSBcImh0dHBzOi8vJHttYWluX2RvbWFpbn1cIlxuU01UUF9IT1NUID0gXCJcIlxuU01UUF9QT1JUID0gXCI1ODdcIlxuU01UUF9BVVRIX1NUUkFURUdZID0gXCJUTFNcIlxuU01UUF9GUk9NX05BTUUgPSBcIk1lYWxpZVwiXG5TTVRQX0ZST01fRU1BSUwgPSBcIlwiXG5TTVRQX1VTRVIgPSBcIlwiXG5TTVRQX1BBU1NXT1JEID0gXCJcIlxuQVBJX0RPQ1MgPSBcIkZhbHNlXCJcbkFMTE9XX1NJR05VUCA9IFwiZmFsc2VcIlxuXG5bY29uZmlnXVxuW1tjb25maWcuZG9tYWluc11dXG5zZXJ2aWNlTmFtZSA9IFwibWVhbGllXCJcbnBvcnQgPSA5MDAwXG5ob3N0ID0gXCIke21haW5fZG9tYWlufVwiXG5cbltjb25maWcuZW52XVxuQkFTRV9VUkwgPSBcIiR7QkFTRV9VUkx9XCJcblRaID0gXCIke1RafVwiXG5ERUZBVUxUX0dST1VQID0gXCJIb21lXCJcbkRFRkFVTFRfSE9VU0VIT0xEID0gXCJGYW1pbHlcIlxuQVBJX0RPQ1MgPSBcIiR7QVBJX0RPQ1N9XCJcblNFQ1VSSVRZX01BWF9MT0dJTl9BVFRFTVBUUyA9IFwiMTBcIlxuU0VDVVJJVFlfVVNFUl9MT0NLT1VUX1RJTUUgPSBcIjI0XCJcbkRBSUxZX1NDSEVEVUxFX1RJTUUgPSBcIjAxOjAwXCJcbkFMTE9XX1NJR05VUCA9IFwiJHtBTExPV19TSUdOVVB9XCJcblNNVFBfSE9TVCA9IFwiJHtTTVRQX0hPU1R9XCJcblNNVFBfUE9SVCA9IFwiJHtTTVRQX1BPUlR9XCJcblNNVFBfQVVUSF9TVFJBVEVHWSA9IFwiJHtTTVRQX0FVVEhfU1RSQVRFR1l9XCJcblNNVFBfRlJPTV9OQU1FID0gXCIke1NNVFBfRlJPTV9OQU1FfVwiXG5TTVRQX0ZST01fRU1BSUwgPSBcIiR7U01UUF9GUk9NX0VNQUlMfVwiXG5TTVRQX1VTRVIgPSBcIiR7U01UUF9VU0VSfVwiXG5TTVRQX1BBU1NXT1JEID0gXCIke1NNVFBfUEFTU1dPUkR9XCIiCn0=
+```
+
+## Links
+
+`recipes`,`shopping-list`,`meal-planning`
+
+---
+
+Version:`latest`
+
+MCSManagerA modern dashboard for managing Minecraft servers. Primarily focused on Minecraft, but also supports other games and features a UI that's easy for beginners to use and supports i18n.
+
+MediaCMSMediaCMS is an open-source video and media CMS. It is a modern, full-featured solution for managing and streaming media content.
+
+### On this page
+
+ConfigurationBase64LinksTags
