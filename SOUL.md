@@ -30,18 +30,11 @@ dk = DokployClient()
 result = dk.deploy_compose(name="my-app", compose_yaml="...")
 ```
 
-**CRITICAL**: Use `terminal()` to run SDK code, NOT `execute_code()`. Hermes `execute_code` runs in a sandbox that scrubs environment variables (by design, for security). `DOKPLOY_API_TOKEN`, `DOKPLOY_BASE_URL`, and `DOKPLOY_SERVER_ID` are NOT available in the sandbox. Terminal calls inherit the full environment and work correctly.
-
-```bash
-# Correct — terminal() has full env access
-cd /opt/data/skills/dokploy && .venv/bin/python3 -c "from sdk import DokployClient; dk = DokployClient(); print(dk.health_check())"
-
-# Wrong — execute_code() scrubs env vars, SDK will fail with missing credentials
-```
+**NOTE**: The SDK needs `requests` + `pyyaml`. If running from `execute_code`, use the venv: `cd /opt/data/skills/dokploy && .venv/bin/python3 -c "..."`. The `terminal` tool works with system Python via `helper.py` (stdlib only).
 
 ## Dokploy API Helper (Fallback)
 
-You also have a lightweight CLI helper at `skills/dokploy/helper.py` (with `openapi.json` adjacent). It is pre-configured with your credentials. Use `terminal()` — not `execute_code()` — to run it (same env scrubbing issue as the SDK). Only use this when the SDK does not cover what you need.
+You also have a lightweight CLI helper at `skills/dokploy/helper.py` (with `openapi.json` adjacent). It is pre-configured with your credentials. Only use this when the SDK does not cover what you need.
 
 ### Commands
 

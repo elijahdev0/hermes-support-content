@@ -20,7 +20,7 @@ The SDK lives at `/opt/data/skills/dokploy/sdk.py`. It needs `requests` + `pyyam
 cd /opt/data/skills/dokploy && .venv/bin/python3 -c "..."
 ```
 
-**Use `terminal()` to run SDK code, NOT `execute_code()`.** The `execute_code` sandbox scrubs environment variables — `DOKPLOY_API_TOKEN`, `DOKPLOY_BASE_URL`, and `DOKPLOY_SERVER_ID` are NOT available there. Terminal calls inherit the full environment.
+Environment variables (`DOKPLOY_API_TOKEN`, `DOKPLOY_BASE_URL`, `DOKPLOY_SERVER_ID`) are passed through to sandboxed execution via `env_passthrough` in config.yaml.
 
 The SDK reads `DOKPLOY_SERVER_ID` from env (falls back to `PLAYGROUND_SERVER_ID`).
 

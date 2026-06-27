@@ -149,6 +149,10 @@ model:
 platform_toolsets:
   cli:
   - hermes-cli
+  api_server:
+  - hermes-api-server
+  - terminal
+  - process
   discord:
   - hermes-discord
   google_chat:
@@ -205,6 +209,12 @@ terminal:
   home_mode: auto
   lifetime_seconds: 300
   timeout: 180
+  env_passthrough:
+    - DOKPLOY_BASE_URL
+    - DOKPLOY_API_TOKEN
+    - DOKPLOY_SERVER_ID
+    - OPENAI_API_KEY
+    - OPENAI_BASE_URL
 tool_loop_guardrails:
   hard_stop_after:
     exact_failure: 5

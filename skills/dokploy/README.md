@@ -28,8 +28,6 @@ Or pass explicitly: `DokployClient(url="...", token="...", server_id="...")`
 
 ## Execution Context
 
-**Use `terminal()` to run SDK code, NOT `execute_code()`.** Hermes scrubs environment variables from `execute_code` child processes (security design). The SDK needs `DOKPLOY_API_TOKEN`, `DOKPLOY_BASE_URL`, and `DOKPLOY_SERVER_ID` which are only available in `terminal()`.
-
 The SDK needs `requests` + `pyyaml`. Install into a venv:
 
 ```bash
@@ -38,13 +36,15 @@ python3 -m venv .venv
 .venv/bin/pip install requests pyyaml
 ```
 
-Then always invoke with:
+Then invoke with:
 
 ```bash
 cd /opt/data/skills/dokploy && .venv/bin/python3 -c "from sdk import DokployClient; dk = DokployClient(); print(dk.health_check())"
 ```
 
 The `helper.py` CLI uses only stdlib (`urllib`) and works with system Python — no venv needed.
+
+Environment variables (`DOKPLOY_API_TOKEN`, `DOKPLOY_BASE_URL`, `DOKPLOY_SERVER_ID`) are passed through to both `terminal` and `execute_code` via `env_passthrough` in config.yaml.
 
 ## All High-Level Methods
 
