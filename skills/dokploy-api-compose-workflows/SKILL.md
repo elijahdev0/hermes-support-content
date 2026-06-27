@@ -12,6 +12,24 @@ category: dokploy
 
 Load this skill when you need to create, update, or deploy a Docker Compose service through the Dokploy API at `/compose.*` endpoints. This is the normal path for deploying raw docker-compose templates.
 
+## SDK Setup (this environment)
+
+The SDK lives at `/opt/data/skills/dokploy/sdk.py`. It needs `requests` + `pyyaml` which are installed in `.venv/`. Always run SDK code with:
+
+```bash
+cd /opt/data/skills/dokploy && .venv/bin/python3 -c "..."
+```
+
+**Use `terminal()` to run SDK code, NOT `execute_code()`.** The `execute_code` sandbox scrubs environment variables — `DOKPLOY_API_TOKEN`, `DOKPLOY_BASE_URL`, and `DOKPLOY_SERVER_ID` are NOT available there. Terminal calls inherit the full environment.
+
+The SDK reads `DOKPLOY_SERVER_ID` from env (falls back to `PLAYGROUND_SERVER_ID`).
+
+For simple API calls where the SDK isn't needed, `helper.py` works with system Python (stdlib only, no venv):
+
+```bash
+python3 /opt/data/skills/dokploy/helper.py call /compose.create '{"name":"my-app"}'
+```
+
 ## Workflow
 
 ### 1. Create the compose service

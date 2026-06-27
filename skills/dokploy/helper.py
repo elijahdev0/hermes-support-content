@@ -8,7 +8,7 @@ import sys
 # Base URL and auth from environment
 _BASE_URL = os.environ.get("DOKPLOY_BASE_URL", "")
 _TOKEN = os.environ.get("DOKPLOY_API_TOKEN", "")
-_SERVER_ID = os.environ.get("PLAYGROUND_SERVER_ID", "")
+_SERVER_ID = os.environ.get("DOKPLOY_SERVER_ID") or os.environ.get("PLAYGROUND_SERVER_ID", "")
 
 # Load OpenAPI spec from adjacent file (written alongside this script by provisioning/sync)
 _SPEC_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "openapi.json")

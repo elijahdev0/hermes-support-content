@@ -39,7 +39,7 @@ import yaml
 
 default_base_url = os.environ.get("DOKPLOY_BASE_URL", "").rstrip("/")
 default_token = os.environ.get("DOKPLOY_API_TOKEN", "")
-default_server_id = os.environ.get("PLAYGROUND_SERVER_ID", "")
+default_server_id = os.environ.get("DOKPLOY_SERVER_ID") or os.environ.get("PLAYGROUND_SERVER_ID", "")
 
 
 # ---------------------------------------------------------------------------
