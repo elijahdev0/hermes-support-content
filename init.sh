@@ -21,4 +21,11 @@ if [ ! -f "/opt/data/config.yaml" ]; then
   exit 1
 fi
 
+# Expand ${VAR} references in config.yaml using container environment variables
+if [ -f /opt/data/config.yaml ]; then
+  envsubst < /opt/data/config.yaml > /opt/data/config.yaml.tmp
+  mv /opt/data/config.yaml.tmp /opt/data/config.yaml
+  echo "[hermes-init] config.yaml: expanded environment variables"
+fi
+
 echo "[hermes-init] Content ready. Skills: $(ls /opt/data/skills | wc -l) directories."
