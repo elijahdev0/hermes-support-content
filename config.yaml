@@ -44,57 +44,57 @@ agent:
   verbose: false
 auxiliary:
   approval:
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
     timeout: 30
   background_review:
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
   compression:
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
     timeout: 120
   curator:
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
   kanban_decomposer:
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
   mcp:
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
   monitor:
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
   profile_describer:
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
   session_search:
     extra_body: {}
     max_concurrency: 3
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
     timeout: 30
   skills_hub:
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
   title_generation:
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
   triage_specifier:
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
   tts_audio_tags:
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
     timeout: 30
   vision:
     download_timeout: 30
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
     timeout: 30
   web_extract:
-    model: ${HERMES_AUX_MODEL:-openai/deepseek-v4-flash}
+    model: ${HERMES_AUX_MODEL}
     provider: main
 browser:
   inactivity_timeout: 120
@@ -110,7 +110,7 @@ compression:
 delegation:
   max_concurrent_children: 3
   max_iterations: 50
-  model: ${HERMES_DELEGATION_MODEL:-openai/deepseek-v4-flash}
+  model: ${HERMES_DELEGATION_MODEL}
   base_url: ${OPENAI_BASE_URL}
   api_key: ${OPENAI_API_KEY}
   reasoning_effort: xhigh
@@ -144,8 +144,8 @@ model:
   api_key: ${OPENAI_API_KEY}
   api_mode: openai
   base_url: ${OPENAI_BASE_URL}
-  default: ${HERMES_MODEL:-openai/deepseek-v4-pro}
-  provider: ${HERMES_PROVIDER:-custom}
+  default: ${HERMES_MODEL}
+  provider: ${HERMES_PROVIDER}
 platform_toolsets:
   cli:
   - hermes-cli
