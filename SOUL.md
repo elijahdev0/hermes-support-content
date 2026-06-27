@@ -30,7 +30,7 @@ dk = DokployClient()
 result = dk.deploy_compose(name="my-app", compose_yaml="...")
 ```
 
-**NOTE**: The SDK needs `requests` + `pyyaml`. If running from `execute_code`, use the venv: `cd /opt/data/skills/dokploy && .venv/bin/python3 -c "..."`. The `terminal` tool works with system Python via `helper.py` (stdlib only).
+**NOTE**: The SDK needs `requests` + `pyyaml`. Use the venv: `cd /opt/data/skills/dokploy && .venv/bin/python3 -c "..."`. The `execute_code` sandbox does NOT have access to environment variables — use `terminal` for any SDK or API calls that need credentials.
 
 ## Dokploy API Helper (Fallback)
 

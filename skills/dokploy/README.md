@@ -44,7 +44,7 @@ cd /opt/data/skills/dokploy && .venv/bin/python3 -c "from sdk import DokployClie
 
 The `helper.py` CLI uses only stdlib (`urllib`) and works with system Python — no venv needed.
 
-Environment variables (`DOKPLOY_API_TOKEN`, `DOKPLOY_BASE_URL`, `DOKPLOY_SERVER_ID`) are passed through to both `terminal` and `execute_code` via `env_passthrough` in config.yaml.
+**Use `terminal` for SDK/API calls — not `execute_code`.** The `execute_code` sandbox does NOT have access to environment variables (`DOKPLOY_API_TOKEN`, `DOKPLOY_BASE_URL`, `DOKPLOY_SERVER_ID`). Terminal inherits the full environment.
 
 ## All High-Level Methods
 
