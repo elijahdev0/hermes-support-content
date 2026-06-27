@@ -146,33 +146,6 @@ model:
   base_url: ${OPENAI_BASE_URL}
   default: ${HERMES_MODEL}
   provider: ${HERMES_PROVIDER}
-platform_toolsets:
-  cli:
-  - hermes-cli
-  api_server:
-  - hermes-api-server
-  - terminal
-  - process
-  discord:
-  - hermes-discord
-  google_chat:
-  - hermes-google_chat
-  homeassistant:
-  - hermes-homeassistant
-  qqbot:
-  - hermes-qqbot
-  signal:
-  - hermes-signal
-  slack:
-  - hermes-slack
-  teams:
-  - hermes-teams
-  telegram:
-  - hermes-telegram
-  whatsapp:
-  - hermes-whatsapp
-  yuanbao:
-  - hermes-yuanbao
 platforms:
   api_server:
     enabled: true
