@@ -28,4 +28,7 @@ if [ -f /opt/data/config.yaml ]; then
   echo "[hermes-init] config.yaml: expanded environment variables"
 fi
 
+# Ensure hermes user (UID 1000) can write to /opt/data
+chown -R 1000:1000 /opt/data
+
 echo "[hermes-init] Content ready. Skills: $(ls /opt/data/skills | wc -l) directories."
