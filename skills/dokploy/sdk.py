@@ -204,14 +204,31 @@ class DokployClient:
     #  INTERNAL HELPERS (used by high-level workflows)
     # =====================================================================
 
+    @staticmethod
+    def _unwrap_search_result(result: Any) -> list[dict]:
+        """Normalize paginated API responses to flat lists.
+
+        Many Dokploy search endpoints return ``{items: [...], total: N}``.
+        This helper always returns a flat ``list[dict]`` so callers never
+        need to branch on ``isinstance(result, dict)``.
+        """
+        if isinstance(result, dict):
+            items = result.get("items")
+            if isinstance(items, list):
+                return items
+            # If it's a dict with no "items" key, wrap it as a single-item
+            # list (e.g. compose.one returns a single object).
+            return [result]
+        if isinstance(result, list):
+            return result
+        if result is None:
+            return []
+        return [result]
+
     def _find_default_environment(self) -> str:
         """Find the first available environment ID."""
-        result = self.environment_search()
-        if isinstance(result, dict):
-            items = result.get("items", [])
-        else:
-            items = result or []
-        if isinstance(items, list) and items:
+        items = self.environment_search()
+        if items:
             first = items[0]
             eid = first.get("id") or first.get("environmentId")
             if eid:
@@ -893,13 +910,7 @@ class DokployClient:
 
     def list_projects(self) -> list[dict]:
         """List all compose projects with their status."""
-        result = self.get("/compose.search")
-        if isinstance(result, dict):
-            items = result.get("items", result.get("composes", result))
-            if isinstance(items, list):
-                return items
-            return [result] if "composeId" in result else []
-        return result or []
+        return self._unwrap_search_result(self.get("/compose.search"))
 
     def get_compose(self, compose_id: str) -> dict:
         """Fetch complete compose object by ID."""
@@ -1013,10 +1024,10 @@ class DokployClient:
     #  PROJECTS & ENVIRONMENTS
     # =====================================================================
 
-    def list_environments(self, **filters) -> Any:
+    def list_environments(self, **filters) -> list[dict]:
         """Search environments. Common filters: projectId, name, limit, offset."""
         params = self._with_server_id({"limit": 100, "offset": 0, **filters})
-        return self.get("/environment.search", params=params)
+        return self._unwrap_search_result(self.get("/environment.search", params=params))
 
     def get_environment(self, environment_id: str) -> dict:
         return self.get("/environment.one", params={"environmentId": environment_id})
@@ -1024,12 +1035,13 @@ class DokployClient:
     def create_environment(self, name: str, project_id: str) -> dict:
         return self.post("/environment.create", json_body={"name": name, "projectId": project_id})
 
-    def environment_search(self, **filters) -> Any:
+    def environment_search(self, **filters) -> list[dict]:
         return self.list_environments(**filters)
 
-    def list_dokploy_projects(self, **filters) -> Any:
+    def list_dokploy_projects(self, **filters) -> list[dict]:
+        """Search Dokploy projects (not compose projects)."""
         params = {"limit": 100, "offset": 0, **filters}
-        return self.get("/project.search", params=params)
+        return self._unwrap_search_result(self.get("/project.search", params=params))
 
     def get_dokploy_project(self, project_id: str) -> dict:
         return self.get("/project.one", params={"projectId": project_id})
@@ -1077,9 +1089,10 @@ class DokployClient:
     #  APPLICATIONS (non-compose Docker apps)
     # =====================================================================
 
-    def list_applications(self, **filters) -> Any:
+    def list_applications(self, **filters) -> list[dict]:
+        """Search non-compose Docker applications."""
         params = self._with_server_id({"limit": 100, "offset": 0, **filters})
-        return self.get("/application.search", params=params)
+        return self._unwrap_search_result(self.get("/application.search", params=params))
 
     def get_application(self, application_id: str) -> dict:
         return self.get("/application.one", params={"applicationId": application_id})
@@ -1160,10 +1173,10 @@ class DokployClient:
     #  DATABASES (convenience wrappers)
     # =====================================================================
 
-    def list_postgres(self, **filters) -> Any:
+    def list_postgres(self, **filters) -> list[dict]:
         """Search postgres services."""
         params = self._with_server_id({"limit": 100, **filters})
-        return self.get("/postgres.search", params=params)
+        return self._unwrap_search_result(self.get("/postgres.search", params=params))
 
     def create_postgres(
         self,
@@ -1186,10 +1199,10 @@ class DokployClient:
     def delete_postgres(self, postgres_id: str) -> None:
         self.post("/postgres.remove", json_body={"postgresId": postgres_id})
 
-    def list_redis(self, **filters) -> Any:
+    def list_redis(self, **filters) -> list[dict]:
         """Search redis services."""
         params = self._with_server_id({"limit": 100, **filters})
-        return self.get("/redis.search", params=params)
+        return self._unwrap_search_result(self.get("/redis.search", params=params))
 
     def create_redis(self, name: str, password: str, environment_id: str = "") -> dict:
         env_id = environment_id or self._find_default_environment()

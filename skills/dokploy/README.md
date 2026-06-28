@@ -1,194 +1,125 @@
-# Dokploy SDK
+# Dokploy SDK — AI-Native Guide
 
-First-class Python client for the Dokploy API. Handles auth, auto-injection of `serverId`, error passthrough, polling, and high-level workflows that used to take 5-10 API calls.
-
-## Quick Start
-
-```python
-from sdk import DokployClient
-
-dk = DokployClient()
-result = dk.deploy_compose(
-    name="my-app",
-    compose_yaml="services:\n  web:\n    image: nginx:alpine",
-    env_vars={"KEY": "value"},
-    domain="my-app.example.com"
-)
-```
-
-## Authentication
-
-Set these environment variables (read from `~/.hermes/.env` automatically):
-
-- `DOKPLOY_BASE_URL` — e.g. `https://dokploy.example.com`
-- `DOKPLOY_API_TOKEN` — API key from Dokploy UI
-- `DOKPLOY_SERVER_ID` — server ID (auto-injected into API calls). Falls back to `PLAYGROUND_SERVER_ID`.
-
-Or pass explicitly: `DokployClient(url="...", token="...", server_id="...")`
+First-class Python client for the Dokploy API. Every list method returns a flat `list[dict]`. High-level methods do 5-10 API calls in one shot. Use this guide to fly through operations in the fewest tool calls possible.
 
 ## Execution Context
 
-The SDK needs `requests` + `pyyaml`. Install into a venv:
+The SDK lives at `/opt/data/skills/dokploy/sdk.py`. It needs `requests` + `pyyaml` in `.venv/`.
 
 ```bash
-cd /opt/data/skills/dokploy
-python3 -m venv .venv
-.venv/bin/pip install requests pyyaml
+cd /opt/data/skills/dokploy && .venv/bin/python3 -c "..."
 ```
 
-Then invoke with:
+**Use `terminal` for SDK calls — not `execute_code`.** The `execute_code` sandbox has no env vars. Terminal does.
+
+For one-off API calls where the SDK is overkill, `helper.py` works with system Python (stdlib only):
 
 ```bash
-cd /opt/data/skills/dokploy && .venv/bin/python3 -c "from sdk import DokployClient; dk = DokployClient(); print(dk.health_check())"
+python3 /opt/data/skills/dokploy/helper.py call /compose.create '{"name":"my-app"}'
 ```
 
-The `helper.py` CLI uses only stdlib (`urllib`) and works with system Python — no venv needed.
+## Return Type Guarantee
 
-**Use `terminal` for SDK/API calls — not `execute_code`.** The `execute_code` sandbox does NOT have access to environment variables (`DOKPLOY_API_TOKEN`, `DOKPLOY_BASE_URL`, `DOKPLOY_SERVER_ID`). Terminal inherits the full environment.
-
-## All High-Level Methods
-
-### Compose Projects
-
-| Method | Description |
-|--------|-------------|
-| `deploy_compose(name, compose_yaml, ...)` | One-shot deploy a raw docker-compose project. Validates YAML, creates compose, fixes sourceType bug, saves env, adds domain, deploys, polls, prints diagnostics. |
-| `update_compose(compose_id, compose_yaml=..., env_vars=..., domain=..., auto_redeploy=True)` | Edit existing compose. Refetches full object automatically (required by Dokploy update). |
-| `redeploy(compose_id)` | Trigger redeploy, poll until done, print diagnostics. |
-| `start_compose(compose_id)` | Start a stopped compose. |
-| `stop_compose(compose_id)` | Stop a running compose. |
-| `delete_compose(compose_id, delete_volumes=False)` | Delete a compose permanently. Verifies it's gone. Aliased as `delete()` for backwards compat. |
-| `get_compose(compose_id)` | Fetch full compose object. |
-| `get_compose_services(compose_id)` | Parse and return `services` dict from the compose file. |
-| `save_compose_env(compose_id, env_vars)` | Overwrite env vars for a compose. |
-| `get_compose_env(compose_id)` | Best-effort read of env vars (Dokploy has no dedicated read endpoint; falls back to composeFile parsing). |
-| `get_compose_deployments(compose_id)` | List deployment records. |
-| `get_compose_domains(compose_id)` | List domains attached to a compose. |
-| `clear_compose_deployments(compose_id)` | Remove old deployment records. |
-| `kill_compose_build(compose_id)` | Kill an in-progress build. |
-| `cancel_compose_deployment(compose_id)` | Cancel current deployment. |
-| `debug(compose_id)` | Print config, domains, deployments, filesystem logs, container logs, and health in one shot. Returns compose dict. |
-
-### Template Catalog
-
-| Method | Description |
-|--------|-------------|
-| `deploy_from_template(name, template_id, ...)` | Deploy from the Dokploy template catalog. Auto-fixes sourceType, overlays env vars, adds domain. |
-| `list_templates(base_url="")` | List available templates from catalog. |
-
-### Servers
-
-| Method | Description |
-|--------|-------------|
-| `list_servers()` | List all servers. |
-| `get_server(server_id)` | Get one server by ID. |
-| `validate_server(server_id="")` | Verify Dokploy can SSH into a server. Auto-uses PLAYGROUND_SERVER_ID. |
-| `get_server_metrics(url, token, data_points=50)` | Fetch raw server metrics (if monitoring configured). |
-| `list_build_servers()` | List build servers. |
-| `get_server_security(server_id="")` | Fetch server security config. |
-
-### Projects & Environments
-
-| Method | Description |
-|--------|-------------|
-| `list_environments(**filters)` | Search/filter environments. |
-| `get_environment(environment_id)` | Get one environment by ID. |
-| `create_environment(name, project_id)` | Create a new environment. |
-| `list_dokploy_projects(**filters)` | Search Dokploy projects. |
-| `get_dokploy_project(project_id)` | Get one project. |
-| `create_dokploy_project(name, description="")` | Create a new project. |
-
-### Domains
-
-| Method | Description |
-|--------|-------------|
-| `create_domain(compose_id, host, service_name, port=3000, https=False)` | Attach a domain to a compose. |
-| `delete_domain(domain_id)` | Remove a domain. |
-| `get_domain(domain_id)` | Fetch domain details. |
-
-### Applications (non-compose Docker apps)
-
-| Method | Description |
-|--------|-------------|
-| `list_applications(**filters)` | Search applications. |
-| `get_application(application_id)` | Get one application. |
-| `deploy_application(application_id)` | Trigger deployment. |
-| `redeploy_application(application_id)` | Trigger redeployment. |
-| `save_application_env(application_id, env_vars)` | Save env vars. |
-| `get_application_logs(application_id, tail=100)` | Read container logs. |
-
-### Docker Containers
-
-| Method | Description |
-|--------|-------------|
-| `list_containers(server_id="")` | List all containers on a server. |
-| `list_containers_by_app(app_name, server_id="")` | List containers by app label. |
-| `restart_container(container_id)` | Restart a container. |
-| `stop_container(container_id)` | Stop a container. |
-| `start_container(container_id)` | Start a container. |
-| `kill_container(container_id)` | Kill a container. |
-
-### Deployments
-
-| Method | Description |
-|--------|-------------|
-| `get_deployments(compose_id)` | List deployments for a compose. |
-| `get_deployment_logs(deployment_id, tail=100)` | Read deployment logs via API. |
-| `kill_deployment_process(deployment_id)` | Kill a running deployment process. |
-
-### Databases
-
-| Method | Description |
-|--------|-------------|
-| `list_postgres(**filters)` | Search Postgres services. |
-| `create_postgres(name, database_name, database_user, database_password, environment_id="")` | Create managed Postgres. |
-| `delete_postgres(postgres_id)` | Remove managed Postgres. |
-| `list_redis(**filters)` | Search Redis services. |
-| `create_redis(name, password, environment_id="")` | Create managed Redis. |
-| `delete_redis(redis_id)` | Remove managed Redis. |
-
-### Health & Version
-
-| Method | Description |
-|--------|-------------|
-| `health_check()` | Quick Dokploy API health. |
-| `get_version()` | Get Dokploy version string. |
-
-## Examples
-
-### Deploy with domain
+**Every list/search method returns a flat `list[dict]`.** No paginated wrappers, no mixed shapes, no `isinstance()` guards needed:
 
 ```python
+dk.list_projects()         # list[dict] — compose projects
+dk.list_dokploy_projects() # list[dict] — Dokploy projects
+dk.list_environments()     # list[dict]
+dk.list_servers()          # list[dict]
+dk.list_containers()       # list[dict]
+dk.list_applications()     # list[dict]
+dk.list_postgres()         # list[dict]
+dk.list_redis()            # list[dict]
+dk.list_templates()        # list[dict]
+
+# Always safe — no isinstance() check needed:
+for item in dk.list_projects():
+    print(item["name"])
+```
+
+The `_unwrap_search_result()` helper normalizes everything internally. You never think about it.
+
+## Workflows
+
+These are complete, copy-paste scripts. Each one accomplishes a goal in a single `terminal` call.
+
+### Show me everything (full system status)
+
+```python
+from sdk import DokployClient
+dk = DokployClient()
+
+print(f"Dokploy {dk.get_version()} — {dk.health_check()['status']}")
+print()
+
+for s in dk.list_servers():
+    print(f"Server: {s['name']} ({s.get('ipAddress','?')})")
+
+for p in dk.list_dokploy_projects():
+    print(f"Project: {p['name']}")
+
+for e in dk.list_environments():
+    print(f"Environment: {e['name']}")
+
+print(f"\nComposes ({len(dk.list_projects())}):")
+for c in dk.list_projects():
+    domains = dk.get_compose_domains(c['composeId'])
+    print(f"  {c['name']}  status={c['composeStatus']}  domains={[d['host'] for d in domains]}")
+
+print(f"\nApplications: {len(dk.list_applications())}")
+print(f"Postgres: {len(dk.list_postgres())}  Redis: {len(dk.list_redis())}")
+
+print(f"\nContainers ({len(dk.list_containers())}):")
+for c in dk.list_containers():
+    print(f"  {c['name']:30s}  state={c['state']:10s}  {c['status']}")
+
+running = sum(1 for c in dk.list_containers() if c['state'] == 'running')
+print(f"  => {running} running")
+```
+
+### What's wrong with this service? (full diagnostics)
+
+```python
+from sdk import DokployClient
+dk = DokployClient()
+
+for c in dk.list_projects():
+    dk.debug(c['composeId'])  # config + domains + deployments + filesystem logs + container logs
+```
+
+`debug()` does everything in one call. Never piece together log reads manually — this is the method.
+
+### Deploy a new service
+
+```python
+from sdk import DokployClient
+dk = DokployClient()
+
 result = dk.deploy_compose(
-    name="my-web",
-    compose_yaml="""
-services:
+    name="my-app",
+    compose_yaml="""services:
   web:
-    image: nginx:alpine
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.web.rule=Host(`${WEB_HOST}`)"
-""",
-    env_vars={"WEB_HOST": "my-web.example.com"},
-    domain="my-web.example.com",
+    image: nginx:alpine""",
+    env_vars={"FOO": "bar"},
+    domain="my-app.example.com",
     domain_port=80,
 )
-compose_id = result["compose_id"]
+# Blocks until done. Prints diagnostics automatically.
+# Returns {"compose_id": "...", "status": "done", "domain": "..."}
 ```
 
-### Update env and redeploy
+### Deploy from the template catalog
 
 ```python
-dk.update_compose(
-    compose_id,
-    env_vars={"API_KEY": "new-secret"},
-    auto_redeploy=True,
-)
-```
+from sdk import DokployClient
+dk = DokployClient()
 
-### Deploy from template catalog
+# List what's available
+for t in dk.list_templates():
+    print(t.get("id"), t.get("name"))
 
-```python
+# Deploy one
 result = dk.deploy_from_template(
     name="my-n8n",
     template_id="n8n",
@@ -197,60 +128,207 @@ result = dk.deploy_from_template(
 )
 ```
 
-### Get diagnostics
+### Update env vars and redeploy
 
 ```python
-dk.debug(compose_id)
+from sdk import DokployClient
+dk = DokployClient()
+
+dk.update_compose(
+    compose_id,
+    env_vars={"API_KEY": "new-secret"},
+    auto_redeploy=True,  # default: blocks until done
+)
 ```
 
-### List containers for debugging
+### Add a domain to an existing compose
 
 ```python
-info = dk.get_compose(compose_id)
-app_name = info["appName"]
-for c in dk.list_containers_by_app(app_name):
-    print(c["Names"], c["State"])
+from sdk import DokployClient
+dk = DokployClient()
+
+dk.update_compose(
+    compose_id,
+    domain="new-domain.example.com",
+    domain_service_name="web",
+    domain_port=3000,
+    auto_redeploy=True,
+)
 ```
 
-## Known API Quirks & Gotchas
+### Restart / stop / start a compose
 
-1. **sourceType bug** — `POST /compose.create` ALWAYS defaults `sourceType` to `"github"` regardless of payload. SDK workaround: after create, fetch full object via `compose.one`, set `sourceType='raw'`, send entire object back via `compose.update`. Partial payloads are silently ignored by update. The SDK does this automatically; you don't need to worry about it.
+```python
+from sdk import DokployClient
+dk = DokployClient()
 
-2. **Env format** — `/compose.saveEnvironment` expects env as a **STRING** (newline-separated `key=value` pairs), NOT a JSON object. The SDK handles this for you.
-
-3. **Full-payload updates** — `compose.update` requires the **full** object. If you send only changed fields, Dokploy silently ignores them. The SDK's `update_compose()` refetches the full object and merges your changes before sending.
-
-4. **Deployment logs on filesystem** — The Dokploy API is broken for reading deployment logs. You MUST read them from `/opt/dokploy/logs/{appName}/*.log`. The SDK's `debug()` does this for you.
-
-5. **Container logs via API** — Container logs are read via `compose.readLogs` (or `application.readLogs`), not `deployment.readLogs`.
-
-6. **Domain changes need redeploy** — Adding or changing a domain does NOT take effect until you redeploy. The SDK prints warnings and `update_compose()` can auto-redeploy.
-
-7. **Env vars need redeploy** — Saving env vars does NOT restart containers. They only take effect on next deploy/redeploy.
-
-8. **Compose YAML gotcha** — Backtick characters in double-quoted strings MUST NOT be backslash-escaped. `Host(`${WEB_HOST}`)` is correct. `Host(\`${WEB_HOST}\`)` breaks YAML parsing. The SDK validates YAML but does not modify your strings.
-
-## Running Tests
-
-Tests are end-to-end and hit the **real** Dokploy playground API. Clean up is automatic.
-
-```bash
-# Ensure env vars are set (loaded from ~/.hermes/.env automatically)
-cd ~/.hermes/skills/dokploy
-pytest tests/test_sdk.py -v
+dk.stop_compose(compose_id)
+dk.start_compose(compose_id)
+dk.redeploy(compose_id)  # triggers a new deployment
 ```
 
-To run a subset:
+### Delete a compose (permanent)
 
-```bash
-pytest tests/test_sdk.py -v -k "deploy_compose or debug"
+```python
+from sdk import DokployClient
+dk = DokployClient()
+
+dk.delete_compose(compose_id)  # verifies it's gone
 ```
+
+### Create a managed database
+
+```python
+from sdk import DokployClient
+dk = DokployClient()
+
+dk.create_postgres(
+    name="my-db",
+    database_name="appdb",
+    database_user="appuser",
+    database_password="secure-password",
+)
+
+dk.create_redis(
+    name="my-cache",
+    password="redis-password",
+)
+```
+
+### Restart / stop a specific container
+
+```python
+from sdk import DokployClient
+dk = DokployClient()
+
+# Find the container
+for c in dk.list_containers():
+    if c['name'] == 'my-app-web':
+        dk.restart_container(c['containerId'])
+```
+
+## Efficiency Rules
+
+When an agent reads this README, it should follow these rules:
+
+1. **One terminal call per goal.** Never chain 3-4 calls when one script can do everything. Combine listing, diagnostics, and health checks into a single Python script.
+
+2. **`debug()` is the diagnostics method.** When the user asks "what's wrong" or "show logs" or "status of X" — use `debug(compose_id)`. It prints config, domains, deployments, filesystem logs, and container logs in one shot. Do not manually assemble log reads with bash `tail` or separate API calls.
+
+3. **Never probe return shapes.** All list methods return flat `list[dict]`. Iterate directly. No `isinstance()`, no `json.dumps()` to discover shapes.
+
+4. **Deploy methods block by default.** `deploy_compose()`, `deploy_from_template()`, `update_compose()`, and `redeploy()` all poll until done. You don't need to check status afterward — the method prints it. If you need fire-and-forget, pass `wait=False`.
+
+5. **Batch parallel reads.** If checking multiple composes, loop over `dk.list_projects()` and call `dk.debug()` for each — all in one script. Don't make separate calls per compose.
+
+## How Dokploy Handles Errors (Tested)
+
+When a deployment fails, what you get depends on the error type. This table tells you where to look:
+
+| Failure | composeStatus | Deployment errorMessage | Filesystem log? | How to diagnose |
+|---|---|---|---|---|
+| Bad YAML syntax | `error` | `null` | No log written | SDK catches this client-side before API call. If bypassing SDK: no error message anywhere. |
+| Bad image (doesn't exist) | stays `running` | `null` | Yes, in `/opt/dokploy/logs/` | `debug()` reads the filesystem log — Docker pull error is there. |
+| Port conflict | `idle` | N/A (no deployment created) | No log written | Silently swallowed. Check `list_projects()` — status stays `idle` with no deployments. |
+| Missing required field | N/A | N/A | N/A | Dokploy returns HTTP 400 with Zod validation error. SDK surfaces it as `DokployError`. |
+| Docker runtime error | `error` | `null` | Yes | `debug()` shows Docker error in filesystem log. |
+| Template not found | N/A | N/A | N/A | Dokploy returns HTTP 500 "Template files not found". |
+
+Key takeaways for debugging:
+
+- **`composeStatus: "error"` with no log files** = bad YAML. The compose file itself is broken. Rerun with valid YAML.
+- **`composeStatus: "running"` but containers aren't up** = Docker pull or runtime failure. Read the filesystem log via `debug()`.
+- **`composeStatus: "idle"` after deploy** = port conflict or Docker daemon issue. No error trail — check port availability.
+- **`errorMessage` in deployment records is always `null`** — never rely on it. Always check filesystem logs via `debug()`.
+
+The SDK's `debug()` method reads filesystem logs automatically. Use it as the first diagnostic tool for any failed deployment — not the deployment API response.
+
+## Method Reference
+
+### Compose Projects
+
+| Method | Description |
+|--------|-------------|
+| `deploy_compose(name, compose_yaml, ...)` | Create + fix sourceType + save env + add domain + deploy + poll + print diagnostics. |
+| `update_compose(compose_id, compose_yaml=..., env_vars=..., domain=..., auto_redeploy=True)` | Edit compose. Refetches full object automatically. |
+| `redeploy(compose_id)` | Trigger redeploy, poll until done. |
+| `start_compose(compose_id)` | Start a stopped compose. |
+| `stop_compose(compose_id)` | Stop a running compose. |
+| `delete_compose(compose_id, delete_volumes=False)` | Delete permanently. Verifies it's gone. |
+| `get_compose(compose_id)` | Fetch full compose object. |
+| `get_compose_services(compose_id)` | Parse services dict from compose file. |
+| `save_compose_env(compose_id, env_vars)` | Overwrite env vars (string format handled automatically). |
+| `get_compose_env(compose_id)` | Best-effort read of env vars. |
+| `get_compose_deployments(compose_id)` | List deployment records. |
+| `list_projects()` | List all compose projects with status. Returns `list[dict]`. |
+| `debug(compose_id)` | One-shot: config, domains, deployments, filesystem logs, container logs. |
+
+### Template Catalog
+
+| Method | Description |
+|--------|-------------|
+| `deploy_from_template(name, template_id, ...)` | Deploy from template catalog. Auto-fixes sourceType. |
+| `list_templates(base_url="")` | List available templates. Returns `list[dict]`. |
+
+### Servers
+
+| Method | Description |
+|--------|-------------|
+| `list_servers()` | List all servers. Returns `list[dict]`. |
+| `get_server(server_id)` | Get one server by ID. |
+| `validate_server(server_id="")` | Verify Dokploy can SSH into server. |
+| `get_server_metrics(url, token, data_points=50)` | Fetch raw server metrics. |
+
+### Projects & Environments
+
+| Method | Description |
+|--------|-------------|
+| `list_environments(**filters)` | Search environments. Returns `list[dict]`. |
+| `get_environment(environment_id)` | Get one environment. |
+| `list_dokploy_projects(**filters)` | Search Dokploy projects. Returns `list[dict]`. |
+| `get_dokploy_project(project_id)` | Get one project. |
+| `create_dokploy_project(name, description="")` | Create a new project. |
+
+### Docker Containers
+
+| Method | Description |
+|--------|-------------|
+| `list_containers(server_id="")` | List all containers. Returns `list[dict]`. |
+| `list_containers_by_app(app_name, server_id="")` | List containers by app label. |
+| `restart_container(container_id)` | Restart a container. |
+| `stop_container(container_id)` | Stop a container. |
+| `start_container(container_id)` | Start a container. |
+| `kill_container(container_id)` | Kill a container. |
+
+### Databases
+
+| Method | Description |
+|--------|-------------|
+| `list_postgres(**filters)` | Search Postgres. Returns `list[dict]`. |
+| `create_postgres(name, database_name, database_user, database_password)` | Create managed Postgres. |
+| `delete_postgres(postgres_id)` | Remove managed Postgres. |
+| `list_redis(**filters)` | Search Redis. Returns `list[dict]`. |
+| `create_redis(name, password)` | Create managed Redis. |
+| `delete_redis(redis_id)` | Remove managed Redis. |
+
+## Known API Quirks (handled automatically)
+
+These are SDK-internal workarounds. You don't need to worry about them, but know they exist:
+
+1. **sourceType bug** — `POST /compose.create` defaults `sourceType` to `"github"` regardless of payload. SDK automatically fetches the full object and patches it to `"raw"` after every create.
+
+2. **Env format** — `/compose.saveEnvironment` expects a newline-separated `key=value` string, not JSON. SDK handles the conversion.
+
+3. **Full-payload updates** — `compose.update` silently ignores partial payloads. SDK's `update_compose()` always refetches the full object.
+
+4. **Deployment logs** — Dokploy API is broken for deployment log reads. SDK's `debug()` reads them from `/opt/dokploy/logs/{appName}/*.log` on the filesystem.
+
+5. **Domain/env changes need redeploy** — Adding domains or changing env does not take effect until you redeploy. SDK's `update_compose()` auto-redeploys by default.
 
 ## Common Pitfalls
 
-- **Missing DOKPLOY_BASE_URL / DOKPLOY_API_TOKEN** — SDK raises `ValidationError` immediately on init.
+- **Missing credentials** — SDK raises `ValidationError` immediately if `DOKPLOY_BASE_URL` or `DOKPLOY_API_TOKEN` is missing.
 - **Invalid YAML** — `deploy_compose()` validates YAML client-side before hitting the API.
-- **Multiple services without domain_service_name** — If your compose has more than one service and you pass a `domain`, you must also pass `domain_service_name` because the SDK can't guess which service to route to.
-- **Empty env vars** — Passing `env_vars={}` is fine, but omitting required env vars that the container expects will cause runtime container failures (not SDK errors).
-- ** compose.update silently ignores partial payloads** — Never call `_request("POST", "/compose.update", json={"composeId": "...", "composeFile": "..."})` directly. Always use the SDK's `update_compose()` method.
-- **Keep your compose file inside backtick quoting safe** — Use single-quoted YAML strings if you need backticks: `Host('` updated.local `')` is invalid; write `Host('updated.local')` instead.
+- **Multiple services + domain** — Pass `domain_service_name=` when your compose has more than one service and you're adding a domain.
+- **Never call `_request()` directly for updates** — Always use `update_compose()`. Direct partial updates are silently ignored by Dokploy.
+- **Backtick quoting in YAML** — `Host(\`${VAR}\`)` breaks YAML. Use `Host(${VAR})` (no backslash before backticks).
