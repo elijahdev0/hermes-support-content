@@ -20,6 +20,7 @@ Usage:
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import random
@@ -117,6 +118,17 @@ def _validate_domain(host: str) -> None:
 def _rnd_id(prefix: str = "sdk", length: int = 8) -> str:
     suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
     return f"{prefix}-{suffix}"
+
+
+def _resolve_template_input(content: str, label: str) -> str:
+    """If content looks like a single-line file path that exists, read it.
+    Otherwise return the content as-is (it's raw template text).
+    Used by deploy_template / import_template / preview_template so you can
+    pass either a file path or inline content."""
+    if "\n" not in content and os.path.isfile(content):
+        with open(content) as f:
+            return f.read()
+    return content
 
 
 # ---------------------------------------------------------------------------
@@ -411,6 +423,170 @@ class DokployClient:
         print("\n" + "=" * 50)
         self.debug(compose_id)
         print("=" * 50)
+
+        return {
+            "compose_id": compose_id,
+            "compose": final,
+            "status": status,
+            "domain": domain,
+        }
+
+    # =====================================================================
+    #  HIGH-LEVEL: inline template deployment
+    # =====================================================================
+
+    def preview_template(
+        self,
+        compose_yaml: str,
+        template_toml: str,
+        app_name: str = "",
+    ) -> dict:
+        """Dry-run a template without creating anything.
+
+        Parameters
+        ----------
+        compose_yaml: docker-compose.yml content, or a file path to read from.
+        template_toml: template.toml content, or a file path to read from.
+        app_name: Optional app name for domain generation (defaults to auto-generated).
+
+        Returns
+        -------
+        dict with ``compose`` (the compose YAML) and ``template`` (resolved domains, envs, mounts).
+
+        Use this to check what the template engine will produce before committing
+        to a deployment. Catches broken TOML but NOT bad YAML or domain mismatches.
+        """
+        compose_text = _resolve_template_input(compose_yaml, "compose_yaml")
+        config_text = _resolve_template_input(template_toml, "template_toml")
+
+        bundle = {"compose": compose_text, "config": config_text}
+        b64 = base64.b64encode(json.dumps(bundle).encode()).decode()
+
+        resp = self.post("/compose.previewTemplate", json_body={
+            "base64": b64,
+            "appName": app_name or _rnd_id("preview"),
+        })
+        return resp
+
+    def import_template(
+        self,
+        name: str,
+        compose_yaml: str,
+        template_toml: str,
+        environment_id: str = "",
+    ) -> dict:
+        """Create a compose and import a template into it (does NOT deploy).
+
+        Parameters
+        ----------
+        name: Compose project name.
+        compose_yaml: docker-compose.yml content, or a file path to read from.
+        template_toml: template.toml content, or a file path to read from.
+        environment_id: Dokploy environment ID (auto-detected if omitted).
+
+        Returns
+        -------
+        dict with ``compose_id`` and the full compose object. Status will be ``idle``
+        until you deploy.
+        """
+        if not name:
+            raise ValidationError("name is required")
+
+        compose_text = _resolve_template_input(compose_yaml, "compose_yaml")
+        config_text = _resolve_template_input(template_toml, "template_toml")
+        _validate_compose_yaml(compose_text)
+
+        env_id = environment_id or self._find_default_environment()
+
+        print(f"-> Creating compose '{name}' for template import...")
+
+        # Step 1: Create minimal compose shell
+        compose = self.post("/compose.create", json_body={
+            "name": name,
+            "environmentId": env_id,
+            "composeType": "docker-compose",
+        })
+        compose_id = compose["composeId"]
+        print(f"  Created composeId = {compose_id}")
+
+        # Step 2: Fix sourceType quirk
+        print("-> Fixing sourceType (API quirk)...")
+        self._update_source_type_raw(compose_id)
+
+        # Step 3: Import the template
+        print("-> Importing template...")
+        bundle = {"compose": compose_text, "config": config_text}
+        b64 = base64.b64encode(json.dumps(bundle).encode()).decode()
+        import_resp = self.post("/compose.import", json_body={
+            "base64": b64,
+            "composeId": compose_id,
+        })
+        print(f"  {import_resp.get('message', 'Template imported')}")
+
+        # Return the updated compose
+        full = self._get_full_compose(compose_id)
+        return {
+            "compose_id": compose_id,
+            "compose": full,
+            "status": full.get("composeStatus"),
+        }
+
+    def deploy_template(
+        self,
+        name: str,
+        compose_yaml: str,
+        template_toml: str,
+        environment_id: str = "",
+        wait: bool = True,
+    ) -> dict:
+        """One-shot: create a compose, import a template, and deploy it.
+
+        Parameters
+        ----------
+        name: Compose project name.
+        compose_yaml: docker-compose.yml content, or a file path to read from.
+        template_toml: template.toml content, or a file path to read from.
+        environment_id: Dokploy environment ID (auto-detected if omitted).
+        wait: If True (default), block until deployment completes.
+            If False, trigger and return immediately.
+
+        Returns
+        -------
+        dict with compose_id, compose, status, and domain.
+        """
+        # Import first
+        result = self.import_template(
+            name=name,
+            compose_yaml=compose_yaml,
+            template_toml=template_toml,
+            environment_id=environment_id,
+        )
+        compose_id = result["compose_id"]
+
+        # Deploy
+        print("-> Triggering deployment...")
+        self.post("/compose.deploy", json_body={"composeId": compose_id})
+
+        if not wait:
+            return {
+                "compose_id": compose_id,
+                "status": "deploying",
+            }
+
+        # Poll
+        print("-> Waiting for deployment to complete...")
+        final = self._poll_compose_status(compose_id)
+        status = final.get("composeStatus")
+        print(f"  Final status: {status}")
+
+        # Diagnostics
+        print("\n" + "=" * 50)
+        self.debug(compose_id)
+        print("=" * 50)
+
+        # Resolve domain
+        domains = self.get("/domain.byComposeId", params={"composeId": compose_id}) or []
+        domain = domains[0]["host"] if domains else None
 
         return {
             "compose_id": compose_id,

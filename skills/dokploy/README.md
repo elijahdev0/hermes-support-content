@@ -109,6 +109,80 @@ result = dk.deploy_compose(
 # Returns {"compose_id": "...", "status": "done", "domain": "..."}
 ```
 
+### Deploy from inline template files (compose + template.toml)
+
+Write a `docker-compose.yml` and `template.toml` on disk, then deploy in one call.
+The template engine handles `${domain}`, `${password:32}`, `${uuid}` and all other helpers.
+Pass file paths or inline strings — the SDK auto-detects which you're using.
+
+**From files on disk** (recommended for version control):
+
+```python
+from sdk import DokployClient
+dk = DokployClient()
+
+result = dk.deploy_template(
+    name="my-app",
+    compose_yaml="my-app/docker-compose.yml",   # file path — auto-reads
+    template_toml="my-app/template.toml",         # file path — auto-reads
+)
+# One call: creates compose → imports template → deploys → polls → prints debug
+# Returns {"compose_id": "...", "status": "done", "domain": "..."}
+```
+
+**From inline strings** (for quick experiments):
+
+```python
+result = dk.deploy_template(
+    name="my-app",
+    compose_yaml="""version: "3.8"
+services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "80"
+""",
+    template_toml="""[variables]
+main_domain = "${domain}"
+
+[config]
+mounts = []
+
+[[config.domains]]
+serviceName = "web"
+port = 80
+host = "${main_domain}"
+""",
+)
+```
+
+### Preview a template (dry-run, no deploy)
+
+```python
+# See what the template engine will produce before committing
+preview = dk.preview_template(
+    compose_yaml="my-app/docker-compose.yml",
+    template_toml="my-app/template.toml",
+    app_name="my-app",  # optional, for domain generation
+)
+print(preview["template"]["domains"])  # resolved domain
+print(preview["template"]["envs"])     # resolved env vars
+print(preview["template"]["mounts"])   # resolved mounts
+```
+
+### Import template without deploying
+
+```python
+# Create compose + import template, but hold off on deploy
+result = dk.import_template(
+    name="my-app",
+    compose_yaml="my-app/docker-compose.yml",
+    template_toml="my-app/template.toml",
+)
+# Compose is created with the template data, status is "idle"
+# Deploy later with: dk.redeploy(result["compose_id"])
+```
+
 ### Deploy from the template catalog
 
 ```python
@@ -262,6 +336,9 @@ The SDK's `debug()` method reads filesystem logs automatically. Use it as the fi
 | `get_compose_deployments(compose_id)` | List deployment records. |
 | `list_projects()` | List all compose projects with status. Returns `list[dict]`. |
 | `debug(compose_id)` | One-shot: config, domains, deployments, filesystem logs, container logs. |
+| `deploy_template(name, compose_yaml, template_toml, ...)` | Create + import template + deploy + poll + print diagnostics. File paths or inline strings. |
+| `import_template(name, compose_yaml, template_toml, ...)` | Create compose + import template (no deploy). |
+| `preview_template(compose_yaml, template_toml, app_name=...)` | Dry-run a template — show resolved domains/envs/mounts without creating anything. |
 
 ### Template Catalog
 
