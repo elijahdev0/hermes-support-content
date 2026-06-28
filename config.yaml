@@ -146,6 +146,11 @@ model:
   base_url: ${OPENAI_BASE_URL}
   default: ${HERMES_MODEL}
   provider: ${HERMES_PROVIDER}
+platform_toolsets:
+  api_server:
+    - hermes-api-server
+    - terminal
+
 platforms:
   api_server:
     enabled: true
