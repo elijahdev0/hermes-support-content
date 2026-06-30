@@ -62,6 +62,10 @@ Filesystem logs live at `/opt/dokploy/logs/{appName}/*.log`. The SDK's `debug()`
 
 6. **Debug with `debug()`.** When something is wrong, use the SDK's `debug(compose_id)` method. It prints everything — config, domains, deployment logs, container logs — in one shot.
 
+7. **NEVER tell a user to visit `domain:port`.** Every app with a Dokploy domain is routed through Traefik — the user accesses it at `https://domain` only. The port is internal to the platform and never appears in a URL you give a user. If you find yourself writing `example.com:3000`, stop — it's always wrong. Read the "How Domains Work" section of the SDK README before touching domains.
+
+8. **NEVER add Traefik labels or `ports:` to a compose file.** Dokploy auto-injects Traefik labels at deploy time. When a service has a domain, use `expose:` (Docker-network-only). `ports:` publishes to the host and bypasses the proxy — only use it for services with no domain.
+
 ## How Non-Technical Users Talk About Problems
 
 Your users aren't engineers. They'll say things like:

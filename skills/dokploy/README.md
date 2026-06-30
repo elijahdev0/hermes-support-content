@@ -236,9 +236,75 @@ dk.update_compose(
 from sdk import DokployClient
 dk = DokployClient()
 
-dk.stop_compose(compose_id)
-dk.start_compose(compose_id)
-dk.redeploy(compose_id)  # triggers a new deployment
+dk.stop_compose(compose_id)    # stops all containers (status -> idle)
+dk.start_compose(compose_id)   # starts existing containers (no recreate)
+dk.redeploy(compose_id)        # re-runs docker compose up -d --build
+```
+
+**CRITICAL: `redeploy()` does NOT guarantee container restarts.**
+
+Under the hood, Dokploy's redeploy runs `docker compose up -d --build --remove-orphans`.
+Docker Compose's `up -d` only **recreates** a container when its configuration or image
+has **changed** since the container was created. If nothing changed, Compose prints
+"up-to-date" and **leaves the running containers untouched** — no restart, no recreate.
+
+**When `redeploy()` will NOT restart your containers:**
+
+| Scenario | What happens |
+|----------|--------------|
+| Compose file unchanged, same image tag | Nothing. Compose sees no changes → containers stay running as-is. |
+| Image uses a mutable tag (`:latest`) but digest hasn't changed | Same as above — Docker sees the same image → no recreate. |
+| Service uses `image:` only (no `build:` section) | The `--build` flag is a no-op. Only `--pull always` (added in newer Dokploy versions) pulls the image, but if the digest is unchanged, still no recreate. |
+| You only changed env vars via `save_compose_env()` without redeploying | Env changes sit dormant until a recreate actually happens. If Compose sees no diff, the new env never reaches the container. |
+
+**To FORCE a container restart, use one of these:**
+
+```python
+from sdk import DokployClient
+dk = DokployClient()
+
+# Option 1: Container-level restart (ALWAYS restarts, picks up nothing new)
+for c in dk.list_containers_by_app("my-app"):
+    dk.restart_container(c['containerId'])
+
+# Option 2: Stop + start compose (forces full stop/start cycle)
+dk.stop_compose(compose_id)   # status -> idle, containers removed
+dk.start_compose(compose_id)   # containers recreated from compose file
+
+# Option 3: True recreation via raw helper (unofficial, uses --force-recreate)
+#   This is what you want when you need new images/env vars applied but
+#   Dokploy's redeploy says "up-to-date" silently.
+import subprocess
+subprocess.run([
+    "docker", "compose", "-p", app_name, "-f", "docker-compose.yml",
+    "up", "-d", "--force-recreate", "--build", "--remove-orphans"
+], cwd=f"/opt/dokploy/compose/{app_name}/code", check=True)
+```
+
+**Decision guide:**
+
+| Goal | Method |
+|------|--------|
+| "Just bounce the containers" (no config change) | `restart_container()` — fastest, one call per container |
+| "Apply new env vars / new image" | `update_compose(env_vars=...)` with `auto_redeploy=True` — but if Compose sees no diff, follow up with `stop_compose()` + `start_compose()` |
+| "Re-pull a mutable tag and recreate" | `stop_compose()` + `start_compose()`, or raw `docker compose up -d --force-recreate` |
+| "Re-run the full Dokploy deploy pipeline" (writes compose file, env file, runs `up -d --build`) | `redeploy()` — but verify containers actually recreated via `debug()` |
+
+**How to verify containers actually restarted:**
+
+```python
+from sdk import DokployClient
+dk = DokployClient()
+
+# Check container start times before and after redeploy
+import subprocess
+result = subprocess.run(
+    ["docker", "inspect", "--format", "{{.Name}} started={{.State.StartedAt}}",
+     "$(docker ps -q --filter label=com.docker.compose.project=APP_NAME)"],
+    capture_output=True, text=True
+)
+print(result.stdout)
+# If StartedAt didn't change, the container was NOT recreated by redeploy.
 ```
 
 ### Delete a compose (permanent)
@@ -325,9 +391,9 @@ The SDK's `debug()` method reads filesystem logs automatically. Use it as the fi
 |--------|-------------|
 | `deploy_compose(name, compose_yaml, ...)` | Create + fix sourceType + save env + add domain + deploy + poll + print diagnostics. |
 | `update_compose(compose_id, compose_yaml=..., env_vars=..., domain=..., auto_redeploy=True)` | Edit compose. Refetches full object automatically. |
-| `redeploy(compose_id)` | Trigger redeploy, poll until done. |
-| `start_compose(compose_id)` | Start a stopped compose. |
-| `stop_compose(compose_id)` | Stop a running compose. |
+| `redeploy(compose_id)` | Re-run `docker compose up -d --build`. ⚠️ Does NOT force container restarts — Compose only recreates containers if config/image changed. To force a restart, use `restart_container()` or `stop_compose()` + `start_compose()`. |
+| `start_compose(compose_id)` | Start a stopped compose (recreates from compose file). |
+| `stop_compose(compose_id)` | Stop a running compose (removes containers, keeps volumes). |
 | `delete_compose(compose_id, delete_volumes=False)` | Delete permanently. Verifies it's gone. |
 | `get_compose(compose_id)` | Fetch full compose object. |
 | `get_compose_services(compose_id)` | Parse services dict from compose file. |
@@ -388,6 +454,129 @@ The SDK's `debug()` method reads filesystem logs automatically. Use it as the fi
 | `create_redis(name, password)` | Create managed Redis. |
 | `delete_redis(redis_id)` | Remove managed Redis. |
 
+## How Domains Work (CRITICAL — read this before touching domains)
+
+**NEVER access an app via `domain:port`. A Dokploy domain maps to a port internally via Traefik — the user accesses it via `https://domain` ONLY.**
+
+### Architecture
+
+```
+User Browser
+    │
+    ▼
+  Traefik (port 80/443 on host)
+    │  reads Docker labels on the container
+    │  routes based on Host(`my-app.example.com`)
+    ▼
+  Container internal port (e.g. 3000)
+    │
+    ▼
+  Your app
+```
+
+Dokploy runs **Traefik** as a reverse proxy on the host's ports 80 and 443. When you create a domain via the API (`domain.create`) or UI, Dokploy **automatically injects Traefik labels** into your compose file at deploy time via `writeDomainsToCompose()`. You do NOT add Traefik labels yourself.
+
+The injected labels look like this (added automatically, never by you):
+
+```yaml
+labels:
+  - traefik.enable=true
+  - traefik.http.routers.{appName}-{domainId}-web.rule=Host(`my-app.example.com`)
+  - traefik.http.routers.{appName}-{domainId}-web.entrypoints=web
+  - traefik.http.services.{appName}-{domainId}-web.loadbalancer.server.port=3000
+  - traefik.http.routers.{appName}-{domainId}-web.service={appName}-{domainId}-web
+```
+
+The `loadbalancer.server.port` is set to the **container port** you specified when creating the domain. That port is **internal to the Docker network** — it is NOT published to the host.
+
+### What This Means For You
+
+| ❌ WRONG | ✅ RIGHT |
+|---------|---------|
+| Access app at `http://my-app.example.com:3000` | Access app at `https://my-app.example.com` |
+| Add `ports: ["3000:3000"]` to publish the port | Add `expose: ["3000"]` (internal-only) or nothing at all |
+| Manually add Traefik labels in compose YAML | Let Dokploy inject them via `domain.create` |
+| Assume `composeStatus: "done"` means the domain works | Verify by curling `https://domain` directly |
+
+### `ports` vs `expose` vs nothing
+
+```yaml
+services:
+  web:
+    image: my-app
+    # ✅ BEST: use `expose` — only accessible within the Docker network.
+    #    Traefik (also in the network) can reach it; the outside world cannot.
+    expose:
+      - "3000"
+
+    # ⚠️ ACCEPTABLE but risky: bare `ports: ["3000"]` publishes to a random
+    #    host port. Works but opens an unproxied backdoor to the app.
+    ports:
+      - "3000"
+
+    # ❌ NEVER: `ports: ["3000:3000"]` binds to the host's port 3000.
+    #    Conflicts with other apps, bypasses Traefik, and is never what you want
+    #    when a domain is configured.
+    ports:
+      - "3000:3000"
+```
+
+**Rule:** If a domain exists for the service, the app is reached via `https://{domain}`. Period. No port. Traefik handles TLS termination and forwards to the container's internal port.
+
+### Creating a domain via the SDK
+
+```python
+from sdk import DokployClient
+dk = DokployClient()
+
+# When deploying a new compose with a domain:
+result = dk.deploy_compose(
+    name="my-app",
+    compose_yaml="""services:
+  web:
+    image: nginx:alpine
+    expose:
+      - "80"
+""",
+    domain="my-app.example.com",
+    domain_service_name="web",   # required if multiple services
+    domain_port=80,              # the INTERNAL port the app listens on
+)
+
+# When adding a domain to an existing compose:
+dk.update_compose(
+    compose_id,
+    domain="my-app.example.com",
+    domain_service_name="web",
+    domain_port=80,
+    auto_redeploy=True,  # domain changes only take effect after redeploy
+)
+```
+
+### Verifying a domain works
+
+```python
+from sdk import DokployClient
+dk = DokployClient()
+
+# 1. Check the domain record exists
+domains = dk.get_compose_domains(compose_id)
+for d in domains:
+    print(f"  host={d['host']}  port={d['port']}  https={d['https']}  serviceName={d['serviceName']}")
+
+# 2. Curl the domain (no port!)
+import subprocess
+result = subprocess.run(["curl", "-sS", "-I", f"https://{domains[0]['host']}"],
+                       capture_output=True, text=True)
+print(result.stdout)
+# Expect HTTP/2 200 or HTTP/1.1 301 — anything else means the domain is broken.
+
+# 3. Or use debug() which shows domains + routing
+dk.debug(compose_id)
+```
+
+**NEVER tell the user to access their app at `domain:port`. Always use the bare domain.**
+
 ## Known API Quirks (handled automatically)
 
 These are SDK-internal workarounds. You don't need to worry about them, but know they exist:
@@ -402,6 +591,8 @@ These are SDK-internal workarounds. You don't need to worry about them, but know
 
 5. **Domain/env changes need redeploy** — Adding domains or changing env does not take effect until you redeploy. SDK's `update_compose()` auto-redeploys by default.
 
+6. **`redeploy()` does NOT force container restarts** — Dokploy's redeploy runs `docker compose up -d --build --remove-orphans`. Docker Compose only recreates containers when their config or image **changed**. If nothing changed, containers stay running untouched — "up-to-date" is silent. To actually force a restart, use `restart_container()` (for a quick bounce) or `stop_compose()` + `start_compose()` (to force full recreation). See the "Restart / stop / start a compose" section above for the full decision guide.
+
 ## Common Pitfalls
 
 - **Missing credentials** — SDK raises `ValidationError` immediately if `DOKPLOY_BASE_URL` or `DOKPLOY_API_TOKEN` is missing.
@@ -409,3 +600,6 @@ These are SDK-internal workarounds. You don't need to worry about them, but know
 - **Multiple services + domain** — Pass `domain_service_name=` when your compose has more than one service and you're adding a domain.
 - **Never call `_request()` directly for updates** — Always use `update_compose()`. Direct partial updates are silently ignored by Dokploy.
 - **Backtick quoting in YAML** — `Host(\`${VAR}\`)` breaks YAML. Use `Host(${VAR})` (no backslash before backticks).
+- **NEVER access domains with `:port`** — A Dokploy domain maps to a container port via Traefik labels automatically. The app is reached at `https://domain` only. telling a user to visit `domain:port` is **always wrong**.
+- **NEVER add Traefik labels to your compose file** — Dokploy injects them at deploy time via `writeDomainsToCompose()`. Manually adding `traefik.*` labels causes routing conflicts.
+- **Use `expose`, not `ports`** — When a service has a domain, use `expose: ["3000"]` (Docker-network-only, what Traefik uses). `ports:` publishes to the host and bypasses Traefik — only use it for services with no domain.
